@@ -1,124 +1,164 @@
 const jzz = require("jzz");
 const { spaceHarrier } = require('./space-harrier.js')
 
-let current = { 
-    partIndex: 1, 
-    bassNoteIndex: 0, 
-    melodyNoteIndex: 0, 
-    kickNoteIndex: 0, 
-    snareNoteIndex: 0,
-    percNoteIndex: 0, 
-};
+const MIDI_STATUS_NOTE_ON = 144;
+const MIDI_STATUS_NOTE_OFF = 160;
 
-
-function getMidiIO(midiAccess, type) {
-    console.log(`${type.toUpperCase()} MIDI DISPONIBLES------------------------------`);
-    midiAccess.info()[type].forEach((port, index) => console.log(`Port ${index}: ${port.name}`));
-}
-/**
- * Envoie une note MIDI à un canal spécifié.
- *
- * @param {number} part - L'indice de la partie de la composition actuellement jouée.
- * @param {string} type - Le type de note à jouer ("bass", "melody", "chords", "snare", etc.)
- * @param {Object} midiOut - L'objet de sortie MIDI vers lequel la note doit être envoyée.
- * @param {number} channel - Le canal MIDI sur lequel la note doit être envoyée.
- */
-async function sendMidiNote(part, type, midiOut, channel) {
-    const fullNote = spaceHarrier[part][type][current[`${type}NoteIndex`]];
-
-    if (fullNote) {
-        await midiOut.noteOn(channel, fullNote, 127);
-        await midiOut.wait(50);
-        await midiOut.noteOff(channel, fullNote, 0);
-        console.log(`midi out | channel : ${channel + 1} | note : ${fullNote}`);
-    } else {
-        console.log(`Pas de ${type} à jouer pour cette partie`);
+class MidiController {
+    constructor() {
+        this.current = {
+            partIndex: 1,
+            bassNoteIndex: 0,
+            melodyNoteIndex: 0,
+            kickNoteIndex: 0,
+            snareNoteIndex: 0,
+            percNoteIndex: 0,
+        };
     }
 
-    current[`${type}NoteIndex`]++;
-    if (current[`${type}NoteIndex`] >= spaceHarrier[part][type].length) {
-        current[`${type}NoteIndex`] = 0;
+    /**
+     * Initialise le contrôleur MIDI.
+     */
+    async init() {
+        try {
+            this.midiAccess = await jzz();
+            this.getAvailableMidiPorts();
+            await this.selectPorts();
+            await this.initializeMidiPorts();
+            console.log(`READY TO PLAY------------------------------`);
+            this.connectMidiIn();
+        } catch (error) {
+            console.error("Error accessing MIDI:", error);
+        }
     }
-}
 
-async function handleMidiMessages() {
-    try {
-        const midiAccess = await jzz();
-        getMidiIO(midiAccess, "inputs");
-        getMidiIO(midiAccess, "outputs");
+    /**
+     * Affiche les ports MIDI disponibles.
+     */
+    getAvailableMidiPorts() {
+        console.log(`AVAILABLE MIDI PORTS------------------------------`);
+        this.midiAccess.info().inputs.forEach((port, index) => console.log(`Input Port ${index}: ${port.name}`));
+        this.midiAccess.info().outputs.forEach((port, index) => console.log(`Output Port ${index}: ${port.name}`));
+    }
 
-        console.log(`SÉLECTION DE PORT------------------------------`);
-        const inputPortName = midiAccess.info().inputs[2].name;
-        const outputPortName = midiAccess.info().outputs[1].name;
+    /**
+     * Sélectionne les ports MIDI pour les entrées et les sorties.
+     */
+    async selectPorts() {
+        console.log(`SELECTING PORTS------------------------------`);
+        this.inputPortName = this.midiAccess.info().inputs[2].name;
+        this.outputPortName = this.midiAccess.info().outputs[1].name;
+        console.log(`Selected input port: ${this.inputPortName}`);
+        console.log(`Selected output port: ${this.outputPortName}`);
+    }
 
-        console.log(`Port d'entrée sélectionné : ${inputPortName}`);
-        console.log(`Port de sortie sélectionné : ${outputPortName}`);
+    /**
+     * Initialise les ports MIDI pour les entrées et les sorties.
+     */
+    async initializeMidiPorts() {
+        this.midiIn = await this.midiAccess.openMidiIn(this.inputPortName);
+        this.midiOut = await this.midiAccess.openMidiOut(this.outputPortName);
+    }
 
-        const midiIn = await midiAccess.openMidiIn(inputPortName);
-        const midiOut = await midiAccess.openMidiOut(outputPortName);
-
-        console.log(`PRET  A JOUER------------------------------`);
-
-        midiIn.connect(async (msg) => {
+    /**
+     * Connecte le port MIDI d'entrée pour recevoir les messages.
+     */
+    connectMidiIn() {
+        this.midiIn.connect(async (msg) => {
             let status = msg[0];
             let channel = status & 0x0F;
             let key = msg["1"];
             let velocity = msg["2"];
             
-            
-            if (status >= 144 && status < 160) { // status between 144 and 159 indicates noteOn message on some channel
+            if (status >= MIDI_STATUS_NOTE_ON && status < MIDI_STATUS_NOTE_OFF) {
                 console.log(`midi in | channel ${channel} | key ${key} | vel ${velocity}`);
-                switch (channel) {
-                    case 0:
-                        await sendMidiNote(current.partIndex, "kick", midiOut, 2);
-                        await sendMidiNote(current.partIndex, "snare", midiOut, 3);
-                        await sendMidiNote(current.partIndex, "bass", midiOut, channel);
-                        console.log(`-------------------------------------------------------`);
-                        break;
-                    case 1:
-                        await sendMidiNote(current.partIndex, "melody", midiOut, channel);
-                        console.log(`-------------------------------------------------------`);
-                        break;
-                    case 2:
-                        await sendMidiNote(current.partIndex, "perc", midiOut, 4);
-                        console.log(`-------------------------------------------------------`);
-                        break;
-                    case 3:
-                        current.partIndex = updatePart();
-                        await sendMidiNote(current.partIndex, "melody", midiOut, 1);
-                        break;
-                    case 4:
-                        resetCurrent();
-                        break;
-                }
+                await this.playMidiNotes(channel);
             }
         });
-        
-    } catch (error) {
-        console.error("Erreur lors de l'accès MIDI :", error);
+    }
+
+    /**
+     * Joue les notes MIDI en fonction du canal.
+     * @param {number} channel - Le canal MIDI.
+     */
+    async playMidiNotes(channel) {
+        switch (channel) {
+            case 0:
+                await this.sendMidiNotes("kick", 2);
+                await this.sendMidiNotes("snare", 3);
+                await this.sendMidiNotes("bass", channel);
+                console.log(`-------------------------------------------------------`);
+                break;
+            case 1:
+                await this.sendMidiNotes("melody", channel);
+                console.log(`-------------------------------------------------------`);
+                break;
+            case 2:
+                await this.sendMidiNotes("perc", 4);
+                console.log(`-------------------------------------------------------`);
+                break;
+            case 3:
+                this.current.partIndex = this.updatePart();
+                await this.sendMidiNotes("melody", 1);
+                break;
+            case 4:
+                this.resetCurrent();
+                break;
+        }
+    }
+
+    /**
+     * Envoie des notes MIDI à un canal spécifié.
+     * @param {string} type - Le type de note à envoyer ("kick", "snare", "bass", "melody", "perc").
+     * @param {number} channel - Le canal MIDI.
+     */
+    async sendMidiNotes(type, channel) {
+        const fullNote = spaceHarrier[this.current.partIndex][type][this.current[`${type}NoteIndex`]];
+        if (fullNote) {
+            await this.midiOut.noteOn(channel, fullNote, 127);
+            await this.midiOut.wait(50);
+            await this.midiOut.noteOff(channel, fullNote, 0);
+            console.log(`midi out | channel : ${channel + 1} | note : ${fullNote}`);
+        } else {
+            console.log(`No ${type} to play for this part`);
+        }
+        this.current[`${type}NoteIndex`]++;
+        if (this.current[`${type}NoteIndex`] >= spaceHarrier[this.current.partIndex][type].length) {
+            this.current[`${type}NoteIndex`] = 0;
+        }
+    }
+
+    /**
+     * Réinitialise les indices courants des notes.
+     */
+    resetCurrent() {
+        this.current = {
+            partIndex: 1,
+            bassNoteIndex: 0,
+            melodyNoteIndex: 0,
+            kickNoteIndex: 0,
+            snareNoteIndex: 0,
+            percNoteIndex: 0,
+        };
+    }
+
+    /**
+     * Met à jour l'indice de la partie courante et réinitialise les indices des notes.
+     * @returns {number} - L'indice de la partie courante.
+     */
+    updatePart() {
+        this.current.partIndex++;
+        if (!spaceHarrier[this.current.partIndex]) {
+            this.current.partIndex = 1;
+        }
+        this.current.bassNoteIndex = 0;
+        this.current.melodyNoteIndex = 0;
+        this.current.snareNoteIndex = 0;
+        this.current.kickNoteIndex = 0;
+        this.current.percNoteIndex = 0;
+        return this.current.partIndex;
     }
 }
 
-function resetCurrent() {
-    current.partIndex = 1;
-    current.bassNoteIndex = 0;
-    current.melodyNoteIndex = 0;
-    current.snareNoteIndex = 0;
-    current.kickNoteIndex = 0;
-    current.percNoteIndex = 0;
-}
-
-function updatePart() {
-    current.partIndex++;
-    if (!spaceHarrier[current.partIndex]) {
-        current.partIndex = 1;
-    }
-    current.bassNoteIndex = 0;
-    current.melodyNoteIndex = 0;
-    current.snareNoteIndex = 0;
-    current.kickNoteIndex = 0;
-    current.percNoteIndex = 0;
-    return current.partIndex;
-}
-
-handleMidiMessages();
+const midiController = new MidiController();
+midiController.init();
