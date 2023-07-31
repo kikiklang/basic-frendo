@@ -1,9 +1,6 @@
-const fs = require("fs");
-const path = require("path");
 const jzz = require("jzz");
 const { spaceHarrier } = require('./space-harrier.js')
 
-const audioFolder = path.join(__dirname, "bounce");
 let current = { 
     partIndex: 1, 
     bassNoteIndex: 0, 
@@ -18,15 +15,6 @@ function getMidiIO(midiAccess, type) {
     console.log(`${type.toUpperCase()} MIDI DISPONIBLES------------------------------`);
     midiAccess.info()[type].forEach((port, index) => console.log(`Port ${index}: ${port.name}`));
 }
-
-function loadAudioSamples() {
-    try {
-        return fs.readdirSync(audioFolder).filter((file) => file.endsWith(".wav"));
-    } catch (err) {
-        console.error("Erreur lors de la lecture des échantillons audio :", err);
-    }
-}
-
 /**
  * Envoie une note MIDI à un canal spécifié.
  *
@@ -53,7 +41,7 @@ async function sendMidiNote(part, type, midiOut, channel) {
     }
 }
 
-async function handleMidiMessages(audioSamples) {
+async function handleMidiMessages() {
     try {
         const midiAccess = await jzz();
         getMidiIO(midiAccess, "inputs");
@@ -133,5 +121,4 @@ function updatePart() {
     return current.partIndex;
 }
 
-const audioSamples = loadAudioSamples();
-handleMidiMessages(audioSamples);
+handleMidiMessages();
