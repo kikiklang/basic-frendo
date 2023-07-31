@@ -13,6 +13,7 @@ class MidiController {
             kickNoteIndex: 0,
             snareNoteIndex: 0,
             percNoteIndex: 0,
+            voxNoteIndex: 0,
         };
     }
 
@@ -68,10 +69,9 @@ class MidiController {
             let status = msg[0];
             let channel = status & 0x0F;
             let key = msg["1"];
-            let velocity = msg["2"];
             
             if (status >= MIDI_STATUS_NOTE_ON && status < MIDI_STATUS_NOTE_OFF) {
-                console.log(`midi in | channel ${channel} | key ${key} | vel ${velocity}`);
+                console.log(`midi in | channel ${channel} | key ${key}`);
                 await this.playMidiNotes(channel);
             }
         });
@@ -86,23 +86,22 @@ class MidiController {
             case 0:
                 await this.sendMidiNotes("kick", 2);
                 await this.sendMidiNotes("snare", 3);
-                await this.sendMidiNotes("bass", channel);
+                await this.sendMidiNotes("bass", 0);
                 console.log(`-------------------------------------------------------`);
                 break;
             case 1:
-                await this.sendMidiNotes("melody", channel);
+                await this.sendMidiNotes("melody", 1);
                 console.log(`-------------------------------------------------------`);
                 break;
             case 2:
                 await this.sendMidiNotes("perc", 4);
+                await this.sendMidiNotes("vox", 5);
                 console.log(`-------------------------------------------------------`);
                 break;
             case 3:
                 this.current.partIndex = this.updatePart();
                 await this.sendMidiNotes("melody", 1);
-                break;
-            case 4:
-                this.resetCurrent();
+                console.log(`-------------------------------------------------------`);
                 break;
         }
     }
@@ -114,15 +113,18 @@ class MidiController {
      */
     async sendMidiNotes(type, channel) {
         const fullNote = spaceHarrier[this.current.partIndex][type][this.current[`${type}NoteIndex`]];
+
         if (fullNote) {
             await this.midiOut.noteOn(channel, fullNote, 127);
             await this.midiOut.wait(50);
             await this.midiOut.noteOff(channel, fullNote, 0);
-            console.log(`midi out | channel : ${channel + 1} | note : ${fullNote}`);
+            console.log(`midi out | channel : ${channel + 1} | type: ${type} | note : ${fullNote}`);
         } else {
-            console.log(`No ${type} to play for this part`);
+            console.log(`midi out | channel : ${channel + 1} | type: ${type} | null`);
         }
+
         this.current[`${type}NoteIndex`]++;
+
         if (this.current[`${type}NoteIndex`] >= spaceHarrier[this.current.partIndex][type].length) {
             this.current[`${type}NoteIndex`] = 0;
         }
@@ -139,6 +141,7 @@ class MidiController {
             kickNoteIndex: 0,
             snareNoteIndex: 0,
             percNoteIndex: 0,
+            voxNoteINdex: 0
         };
     }
 
@@ -148,16 +151,20 @@ class MidiController {
      */
     updatePart() {
         this.current.partIndex++;
+
         if (!spaceHarrier[this.current.partIndex]) {
             this.current.partIndex = 1;
         }
+        
         this.current.bassNoteIndex = 0;
         this.current.melodyNoteIndex = 0;
         this.current.snareNoteIndex = 0;
         this.current.kickNoteIndex = 0;
         this.current.percNoteIndex = 0;
+        this.current.voxNoteIndex = 0;
         return this.current.partIndex;
     }
+    
 }
 
 const midiController = new MidiController();
