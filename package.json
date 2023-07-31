@@ -1,0 +1,16 @@
+{
+  "name": "jzz-midi",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "jzz": "^1.6.6",
+    "midi-file": "^1.2.4",
+    "play-sound": "^1.1.5"
+  }
+}
