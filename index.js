@@ -7,6 +7,7 @@ import path from 'path';
 const MIDI_STATUS_NOTE_ON = 144;
 const MIDI_STATUS_NOTE_OFF = 160;
 
+let currentSong = {};
 let current = {
     partIndex: 1,
     bassNoteIndex: 0,
@@ -57,16 +58,13 @@ function playMidiNotes(channel, midiOut) {
     switch (channel) {
         case 0:
             sendMidiNotes("bass", 0, midiOut);
-            console.log(`-------------------------------------------------------`);
             break;
         case 1:
             sendMidiNotes("melody", 1, midiOut);
-            console.log(`-------------------------------------------------------`);
             break;
         case 2:
             current.partIndex = updatePart();
             sendMidiNotes("melody", 1, midiOut);
-            console.log(`-------------------------------------------------------`);
             break;
     }
 }
@@ -79,6 +77,7 @@ async function sendMidiNotes(type, channel, midiOut) {
         await midiOut.wait(5);
         await midiOut.noteOff(channel, fullNote, 0);
         console.log(`midi out | channel : ${channel + 1} | type: ${type} | note : ${fullNote}`);
+        console.log('---------------------------------------------')
     } 
 
     current[`${type}NoteIndex`]++;
@@ -120,9 +119,10 @@ async function selectSong() {
             }
         ]);
 
-        const currentSong = await import(path.join(songsDir, song));
-
-        return currentSong;
+        await import(path.join(songsDir, song))
+            .then((module) => {
+                currentSong = module.default;
+            });
     } catch (err) {
         console.error("Could not list the directory.", err);
         process.exit(1);

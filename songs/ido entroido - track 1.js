@@ -5,7 +5,4 @@ const currentSong = {
     }
 };
 
-module.exports = {
-    currentSong,
-};
-
+export default currentSong;
