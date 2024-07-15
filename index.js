@@ -103,9 +103,9 @@ async function sendMidiNotes(type, channel, midiOut) {
 
     if (fullNote) {
         await midiOut.noteOn(channel, fullNote, 127);
-        await midiOut.wait(5);
+        await midiOut.wait(10);
         await midiOut.noteOff(channel, fullNote, 0);
-        console.log(`midi out | channel : ${channel + 1} | type: ${type} | note : ${fullNote}`);
+        console.log(`midi out | port: ${midiOut} | channel : ${channel + 1} | type: ${type} | note : ${fullNote}`);
         console.log('---------------------------------------------')
     } 
 
