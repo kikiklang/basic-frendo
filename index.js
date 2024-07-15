@@ -14,6 +14,35 @@ let current = {
     melodyNoteIndex: 0
 };
 
+async function selectSong() {
+    const songsDir = path.join(process.cwd(), 'songs');
+    const rl = readline.createInterface({
+        input: process.stdin,
+        output: process.stdout
+    });
+
+    try {
+        const files = await fs.readdir(songsDir);
+
+        const { song } = await inquirer.prompt([
+            {
+                type: 'list',
+                name: 'song',
+                message: 'Choisis la chanson Frendo:',
+                choices: files
+            }
+        ]);
+
+        await import(path.join(songsDir, song))
+            .then((module) => {
+                currentSong = module.default;
+            });
+    } catch (err) {
+        console.error("Could not list the directory.", err);
+        process.exit(1);
+    }
+}
+
 async function init() {
     try {
         const midiAccess = await jzz();
