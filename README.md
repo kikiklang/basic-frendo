@@ -20,31 +20,22 @@ Le concept de base a été developpé dans le projet bitwig `basic Frendo.bwproj
 aseqdump -l
 ```
 
-3. si oui, créer 2 paires de ports midi virtuels
+3. si oui, créer 1 port midi virtuel
 
 ```
-sudo modprobe snd-virmidi
+sudo modprobe snd-virmidi midi_devs=1
 ```
 
-4. le resultat est le suivant :
+4. le resultat est le suivant avec aseqdump -l :
 
 ```
- 20:0    Virtual Raw MIDI 1-0             VirMIDI 1-0
- 21:0    Virtual Raw MIDI 1-1             VirMIDI 1-1
- 22:0    Virtual Raw MIDI 1-2             VirMIDI 1-2
- 23:0    Virtual Raw MIDI 1-3             VirMIDI 1-3
+24:0    Virtual Raw MIDI 2-0             VirMIDI 2-0
 ```
 
-5. dans un nouveau terminal, se mettre en surveillance des ports virtuels et surveiller le flux midi qui arrive de bitwig :
+5. dans un nouveau terminal, on peut se mettre en surveillance des ports virtuels et surveiller le flux midi qui arrive de bitwig :
 
 ```
-aseqdump -p 21:0 // valeur peut varier
-```
-
-6. dans un nouveau terminal, se mettre en surveillance des ports virtuels et surveiller le flux midi qui part vers bitwig :
-
-```
-aseqdump -p 20:0 // valeur peut varier
+aseqdump -p 24:0
 ```
 
 7. ouvrir bitwig et ouvrir la console bitwig pour verifier que le script controller basic frendo est bien chargé
@@ -64,12 +55,13 @@ nodemon index.js
 
 ## Diverses commandes
 
-| Action                                        | Commande                    |
-| --------------------------------------------- | --------------------------- |
-| Ouvrir la console Bitwig                      | `Ctrl+shift+j`              |
-| Voir tous les ports MIDI disponibles          | `aseqdump -l`               |
-| Surveiller le flux sur un port donné          | `aseqdump -p 24:0`          |
-| Créer des paires de ports MIDI virtuels       | `sudo modprobe snd-virmidi` |
-| Voir les connexions MIDI actuellement actives | `aconnect -o -l`            |
-| Créer une liaison entre deux ports donnés     | `aconnect 14:0 24:0`        |
-| Supprimer une liaison entre deux ports donnés | `aconnect -d 14:0 24:0`     |
+| Action                                        | Commande                                             |
+| --------------------------------------------- | -----------------------------------------------------|
+| Ouvrir la console Bitwig                      | `Ctrl+shift+j`                                       |
+| Voir tous les ports MIDI disponibles          | `aseqdump -l`                                        |
+| Surveiller le flux sur un port donné          | `aseqdump -p 24:0`                                   |
+| Créer 4 ports MIDI virtuels                   | `sudo modprobe snd-virmidi`                          |
+| Créer 1 port midi virtuel                     | `sudo modprobe snd-virmidi midi_devs=1`              |
+| Voir les connexions MIDI actuellement actives | `aconnect -o -l`                                     |
+| Créer une liaison entre deux ports donnés     | `aconnect 14:0 24:0`                                 |
+| Supprimer une liaison entre deux ports donnés | `aconnect -d 14:0 24:0`                              |

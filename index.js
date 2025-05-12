@@ -7,38 +7,45 @@ import path from 'path';
 const MIDI_STATUS_NOTE_ON = 144;
 const MIDI_STATUS_NOTE_OFF = 160;
 
-let currentSong = {};
+let currentSongSet = {};
 let current = {
-    partIndex: 1,
+    songIndex: 0,
+    partIndex: 0,
     bassNoteIndex: 0,
     melodyNoteIndex: 0
 };
 
-async function selectSong() {
-    const songsDir = path.join(process.cwd(), 'songs');
+async function selectSongFile() {
+    const setsDir = path.join(process.cwd(), 'sets');
     const rl = readline.createInterface({
         input: process.stdin,
         output: process.stdout
     });
 
     try {
-        const files = await fs.readdir(songsDir);
+        const files = await fs.readdir(setsDir);
 
-        const { song } = await inquirer.prompt([
+        const { songFile } = await inquirer.prompt([
             {
                 type: 'list',
-                name: 'song',
-                message: 'Choisis la chanson Frendo:',
+                name: 'songFile',
+                message: 'Choisis le fichier de chansons Frendo:',
                 choices: files
             }
         ]);
 
-        await import(path.join(songsDir, song))
+        const songFilePath = path.join(setsDir, songFile);
+        console.log(`Selected song file path: ${songFilePath}`);
+
+        await import(songFilePath)
             .then((module) => {
-                currentSong = module.default;
+                currentSongSet = module.default;
             });
+
+        current.songIndex = 0;
+        current.partIndex = 0;
     } catch (err) {
-        console.error("Could not list the directory.", err);
+        console.error("Could not list the directory or import the file.", err);
         process.exit(1);
     }
 }
@@ -57,11 +64,16 @@ async function init() {
 
 async function selectPorts(midiAccess) {
     console.log(`SELECTING PORTS------------------------------`);
-    const inputPortName = midiAccess.info().inputs[2].name;
-    const outputPortName = midiAccess.info().outputs[1].name;
-    console.log(`Selected input port: ${inputPortName}`);
-    console.log(`Selected output port: ${outputPortName}`);
-    return { inputPortName, outputPortName };
+
+    const inputPort = midiAccess.info().inputs.find(input => input.name === 'VirMIDI 2-0');
+    if (!inputPort) throw new Error(`Input port not found.`);
+
+    const outputPort = midiAccess.info().outputs.find(output => output.name === 'VirMIDI 2-0');
+    if (!outputPort) throw new Error(`Output port not found.`);
+
+    console.log(`Selected input port: ${inputPort.name}`);
+    console.log(`Selected output port: ${outputPort.name}`);
+    return { inputPortName: inputPort.name, outputPortName: outputPort.name };
 }
 
 async function initializeMidiPorts(midiAccess, inputPortName, outputPortName) {
@@ -74,7 +86,7 @@ function connectMidiIn(midiIn, midiOut) {
     midiIn.connect(async (msg) => {
         let status = msg[0];
         let channel = status & 0x0F;
-        let key = msg["1"];
+        let key = msg[1];
         
         if (status >= MIDI_STATUS_NOTE_ON && status < MIDI_STATUS_NOTE_OFF) {
             console.log(`midi in | channel ${channel} | key ${key}`);
@@ -92,71 +104,80 @@ function playMidiNotes(channel, midiOut) {
             sendMidiNotes("melody", 1, midiOut);
             break;
         case 2:
+            // current.partIndex = updatePart(); pour le trigger tap tap desormais dispo depuis l'arrivee du controller pourri
+            break;
+        case 3:
+            current.songIndex = updateSong();
+            break;
+        case 4:
             current.partIndex = updatePart();
-            sendMidiNotes("melody", 1, midiOut);
             break;
     }
 }
 
 async function sendMidiNotes(type, channel, midiOut) {
-    const fullNote = currentSong[current.partIndex][type][current[`${type}NoteIndex`]];
+    const songKeys = Object.keys(currentSongSet);
+    const currentSong = currentSongSet[songKeys[current.songIndex]];
+    const partKey = (current.partIndex + 1).toString();
+    const fullNote = currentSong[partKey][type][current[`${type}NoteIndex`]];
 
     if (fullNote) {
         await midiOut.noteOn(channel, fullNote, 127);
         await midiOut.wait(10);
         await midiOut.noteOff(channel, fullNote, 0);
-        console.log(`midi out | port: ${midiOut} | channel : ${channel + 1} | type: ${type} | note : ${fullNote}`);
+        console.log(`midi out | channel : ${channel + 1} | type: ${type} | note : ${fullNote}`);
         console.log('---------------------------------------------')
     } 
 
     current[`${type}NoteIndex`]++;
 
-    if (current[`${type}NoteIndex`] >= currentSong[current.partIndex][type].length) {
+    if (current[`${type}NoteIndex`] >= currentSong[partKey][type].length) {
         current[`${type}NoteIndex`] = 0;
     }
 }
 
 function updatePart() {
+    const songKeys = Object.keys(currentSongSet);
+    const currentSong = currentSongSet[songKeys[current.songIndex]];
+
     current.partIndex++;
 
-    if (!currentSong[current.partIndex]) {
-        current.partIndex = 1;
+    if (!currentSong[(current.partIndex + 1).toString()]) {
+        current.partIndex = 0;
     }
     
     current.bassNoteIndex = 0;
     current.melodyNoteIndex = 0;
 
+    console.log(`
+╔═══════════════════════════════════════════╗
+║ Changement de partie: partie ${(current.partIndex + 1).toString().padEnd(12)} ║
+╚═══════════════════════════════════════════╝
+`);
+
     return current.partIndex;
 }
 
-async function selectSong() {
-    const songsDir = path.join(process.cwd(), 'songs');
-    const rl = readline.createInterface({
-        input: process.stdin,
-        output: process.stdout
-    });
+function updateSong() {
+    const songKeys = Object.keys(currentSongSet);
 
-    try {
-        const files = await fs.readdir(songsDir);
+    current.songIndex++;
 
-        const { song } = await inquirer.prompt([
-            {
-                type: 'list',
-                name: 'song',
-                message: 'Choisis la chanson Frendo:',
-                choices: files
-            }
-        ]);
-
-        await import(path.join(songsDir, song))
-            .then((module) => {
-                currentSong = module.default;
-            });
-    } catch (err) {
-        console.error("Could not list the directory.", err);
-        process.exit(1);
+    if (current.songIndex >= songKeys.length) {
+        current.songIndex = 0;
     }
+
+    current.partIndex = 0;
+    current.bassNoteIndex = 0;
+    current.melodyNoteIndex = 0;
+
+    console.log(`
+╔════════════════════════════════════════╗
+║ Changement de chanson: ${songKeys[current.songIndex].padEnd(12)}    ║
+╚════════════════════════════════════════╝
+    `);
+
+    return current.songIndex;
 }
 
-selectSong()
-    .then(() => init());
+selectSongFile().then(() => init());
