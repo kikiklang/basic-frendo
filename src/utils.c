@@ -43,22 +43,6 @@ void print_banner(void) {
 /**
  * Affiche un changement d'état avec formatage spécial
  */
-void print_state_change(const char *type, const char *name) {
-    if (!type || !name) return;
-    
-    char display_name[MAX_NAME_LENGTH];
-    strncpy(display_name, name, sizeof(display_name) - 1);
-    display_name[sizeof(display_name) - 1] = '\0';
-    
-    // Truncate si trop long
-    if (strlen(display_name) > 30) {
-        display_name[27] = '.';
-        display_name[28] = '.';
-        display_name[29] = '.';
-        display_name[30] = '\0';
-    }
-    
-    printf("\n╔═══════════════════════════════════════════╗\n");
-    printf("║ Changement de %-8s: %-20s ║\n", type, display_name);
-    printf("╚═══════════════════════════════════════════╝\n");
+void print_state_change(void) {
+    printf("═══════════════════════════════════════════\n");
 }

@@ -103,6 +103,6 @@ void play_melody_note(midi_interface_t *midi, song_set_t *song_set, frendo_state
 // utils.c
 const char* error_to_string(frendo_error_t error);
 void print_banner(void);
-void print_state_change(const char *type, const char *name);
+void print_state_change(void);
 
 #endif // BASIC_FRENDO_H

@@ -44,8 +44,8 @@ void update_song(frendo_state_t *state, const song_set_t *song_set) {
     reset_note_indices(state);
     
     // Afficher le changement
-    const char *song_name = song_set->songs[state->song_index].name;
-    print_state_change("chanson", song_name);
+    // plus besoin de song_name
+    print_state_change();
     
     printf("[STATE] Song: %d/%d | Part: %d/%d\n", 
            state->song_index + 1, song_set->song_count,
@@ -75,9 +75,8 @@ void update_part(frendo_state_t *state, const song_set_t *song_set) {
     reset_note_indices(state);
     
     // Afficher le changement
-    char part_info[64];
-    snprintf(part_info, sizeof(part_info), "partie %d", state->part_index + 1);
-    print_state_change("partie", part_info);
+    // plus besoin de part_info
+    print_state_change();
     
     printf("[STATE] Song: %d/%d | Part: %d/%d\n", 
            state->song_index + 1, song_set->song_count,
@@ -121,8 +120,8 @@ void play_bass_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
     uint8_t note = bass_seq->notes[state->bass_note_index];
     
     // Envoyer la note sur le canal 0
-    send_midi_note(midi, 4, note); // Canal 5 (0-indexé)
-    printf("[MIDI OUT] Channel: 4 | Type: bass | Note: %d\n", note);
+    send_midi_note(midi, 3, note); // Canal 5 (index 3)
+    // Log supprimé pour éviter le doublon
     
     // Avancer dans la séquence
     state->bass_note_index++;
@@ -174,8 +173,8 @@ void play_melody_note(midi_interface_t *midi, song_set_t *song_set, frendo_state
     uint8_t note = melody_seq->notes[state->melody_note_index];
     
     // Envoyer la note sur le canal 1
-    send_midi_note(midi, 5, note); // Canal 6 (0-indexé)
-    printf("[MIDI OUT] Channel: 5 | Type: melody | Note: %d\n", note);
+    send_midi_note(midi, 4, note); // Canal 6 (index 4)
+    // Log supprimé pour éviter le doublon
     
     // Avancer dans la séquence
     state->melody_note_index++;

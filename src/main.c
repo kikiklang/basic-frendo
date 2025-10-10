@@ -168,7 +168,6 @@ int main(int argc, char *argv[]) {
     printf("  • Channel 1: Trigger next BASS note\n");
     printf("  • Channel 2: Trigger next MELODY note\n");
     printf("  • Channel 3: Switch to next SONG\n");
-    printf("  • Channel 4: Switch to next PART\n");
     printf("─────────────────────────────────────────\n");
     
     // Entrer dans la boucle d'écoute MIDI

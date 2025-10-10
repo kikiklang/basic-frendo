@@ -189,36 +189,26 @@ void process_midi_message(const snd_seq_event_t *event,
     // Traiter selon le canal MIDI
     switch (channel) {
         case 0:
-            // Canal 0: Jouer la note bass suivante
+            // Channel 1 (index 0): Jouer la note bass suivante
             play_bass_note(midi, song_set, state);
             break;
-            
         case 1:
-            // Canal 1: Jouer la note melody suivante
+            // Channel 2 (index 1): Jouer la note melody suivante
             play_melody_note(midi, song_set, state);
             break;
-            
         case 2:
-            // Canal 2: Changer de chanson
-            update_song(state, song_set);
+            // Channel 3 (index 2): Changer selon la note reçue
+            if (note == 48) {
+                update_song(state, song_set);
+            } else if (note == 49) {
+                update_part(state, song_set);
+            }
             break;
-            
-        case 3:
-            // Canal 3: Changer de partie
-            update_part(state, song_set);
-            break;
-            
-        case 4:
-            // Canal 4: Réservé pour usage futur
-            printf("[INFO] Channel 4 triggered (not implemented)\n");
-            break;
-            
         default:
             // Autres canaux ignorés
             printf("[INFO] Ignored MIDI on channel %d\n", channel);
             break;
     }
-    
     printf("─────────────────────────────────────────\n");
 }
 
