@@ -121,8 +121,8 @@ void play_bass_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
     uint8_t note = bass_seq->notes[state->bass_note_index];
     
     // Envoyer la note sur le canal 0
-    send_midi_note(midi, 0, note);
-    printf("[MIDI OUT] Channel: 0 | Type: bass | Note: %d\n", note);
+    send_midi_note(midi, 4, note); // Canal 5 (0-indexé)
+    printf("[MIDI OUT] Channel: 4 | Type: bass | Note: %d\n", note);
     
     // Avancer dans la séquence
     state->bass_note_index++;
@@ -174,8 +174,8 @@ void play_melody_note(midi_interface_t *midi, song_set_t *song_set, frendo_state
     uint8_t note = melody_seq->notes[state->melody_note_index];
     
     // Envoyer la note sur le canal 1
-    send_midi_note(midi, 1, note);
-    printf("[MIDI OUT] Channel: 1 | Type: melody | Note: %d\n", note);
+    send_midi_note(midi, 5, note); // Canal 6 (0-indexé)
+    printf("[MIDI OUT] Channel: 5 | Type: melody | Note: %d\n", note);
     
     // Avancer dans la séquence
     state->melody_note_index++;

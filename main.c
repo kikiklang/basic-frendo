@@ -22,6 +22,10 @@ static bool g_running = true;
 void signal_handler(int signal) {
     printf("\n[SIGNAL] Received signal %d, shutting down...\n", signal);
     g_running = false;
+    
+    // Forcer l'arrêt immédiat si nécessaire
+    cleanup_midi_interface(&g_midi);
+    exit(0);
 }
 
 
@@ -131,8 +135,8 @@ int main(int argc, char *argv[]) {
         return EXIT_FAILURE;
     }
     
-    // Configuration des ports MIDI (VirMIDI 2-0)
-    result = setup_midi_ports(&g_midi, "VirMIDI 2-0");
+    // Configuration des ports MIDI (VirMIDI 1-0)
+    result = setup_midi_ports(&g_midi, "VirMIDI 1-0");
     if (result != FRENDO_OK) {
         printf("[ERROR] Failed to setup MIDI ports: %s\n", error_to_string(result));
         printf("[HELP] Make sure VirMIDI is loaded: sudo modprobe snd-virmidi midi_devs=1\n");
