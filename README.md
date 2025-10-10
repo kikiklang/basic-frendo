@@ -46,59 +46,35 @@ Bitwig Studio (lecture des séquences)
 
 ```
 basic-frendo/
-├── 📄 main.c                   # Programme principal et boucle MIDI
-├── 📄 basic_frendo.h           # Déclarations communes et structures
-├── 📄 json_parser.c            # Parseur de fichiers de sets JSON
-├── 📄 midi_handler.c           # Interface ALSA MIDI bas niveau
-├── 📄 frendo_core.c            # Logique métier (séquençage)
-├── 📄 utils.c                  # Fonctions utilitaires
-├── 🔧 Makefile                 # Compilation et tests automatisés
-├── 📂 sets/                    # Fichiers de configuration musicale
-│   └── 📄 ido-entroido-2025.json
-├── 📖 INSTALL-arch.md          # Guide d'installation Arch Linux
-├── 📖 TESTING.md               # Guide de test complet
+├── � src/                     # Code source C
+│   ├── main.c                  # Programme principal
+│   ├── basic_frendo.h          # Déclarations communes  
+│   ├── json_parser.c           # Parseur JSON
+│   ├── midi_handler.c          # Interface ALSA
+│   ├── frendo_core.c           # Logique métier
+│   └── utils.c                 # Utilitaires
+├── � tools/                   # Outils Python Bitwig
+│   ├── bitwig-to-frendo.py     # Convertisseur avancé
+│   └── quick-convert.py        # Conversion rapide
+├── � docs/                    # Documentation
+│   ├── INSTALL-arch.md         # Installation Arch
+│   └── BITWIG-WORKFLOW.md      # Workflow Bitwig
+├── 📂 sets/                    # Fichiers de sets JSON
+│   └── ido-entroido-2025.json  # Exemple de set
+├── � build/                   # Fichiers de compilation
+├── � Makefile                 # Build system
 └── 📖 README.md                # Cette documentation
 ```
 
 ### Description détaillée des fichiers
 
-#### `main.c` - Programme principal
-- Point d'entrée de l'application
-- Gestion des arguments en ligne de commande
-- Initialisation des composants (JSON, MIDI, ALSA)
-- Boucle principale d'écoute MIDI avec polling optimisé
-- Gestion des signaux système (Ctrl+C)
+### Organisation modulaire
 
-#### `basic_frendo.h` - Déclarations communes
-- Structures de données : `song_t`, `song_part_t`, `note_sequence_t`
-- État global du système : `frendo_state_t`
-- Interface MIDI : `midi_interface_t`
-- Constantes et codes d'erreur
-- Prototypes de toutes les fonctions
-
-#### `json_parser.c` - Parseur de configuration
-- Chargement des fichiers JSON de sets musicaux
-- Conversion JSON → structures C natives
-- Validation des données d'entrée
-- Gestion d'erreurs de parsing robuste
-
-#### `midi_handler.c` - Interface ALSA
-- Initialisation du séquenceur ALSA
-- Création et configuration des ports MIDI
-- Connexion automatique au port VirMIDI
-- Envoi/réception de messages MIDI optimisés
-- Gestion des événements MIDI en temps réel
-
-#### `frendo_core.c` - Logique métier
-- Algorithmes de séquençage bass/melody
-- Navigation entre chansons et parties
-- Gestion des indices de position dans les séquences
-- Logique de bouclage automatique
-
-#### `utils.c` - Utilitaires
-- Gestion d'erreurs et logging
-- Fonctions d'affichage (bannière, changements d'état)
-- Utilitaires système
+- **`src/`** : Code source C organisé en modules fonctionnels
+- **`tools/`** : Scripts Python pour le workflow Bitwig→Frendo  
+- **`docs/`** : Documentation technique et guides d'utilisation
+- **`sets/`** : Fichiers JSON de configuration musicale
+- **`build/`** : Artefacts de compilation (généré automatiquement)
 
 ## 🚀 Installation et configuration
 
@@ -470,4 +446,4 @@ Le code est volontairement **pédagogique et commenté** pour faciliter l'appren
 
 **Bon live ! 🎵🥁**
 
-*Pour toute question technique, consulter les fichiers `INSTALL-arch.md` et `TESTING.md`.*
+*Pour toute question technique, consulter `docs/INSTALL-arch.md` et `docs/BITWIG-WORKFLOW.md`.*

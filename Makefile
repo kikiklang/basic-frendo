@@ -8,9 +8,11 @@ LIBS = -lasound -lcjson -lpthread
 TARGET = basic-frendo
 
 # Répertoires
-SRCDIR = .
+SRCDIR = src
 OBJDIR = build
 SETSDIR = sets
+TOOLSDIR = tools
+DOCSDIR = docs
 
 # Fichiers sources
 SOURCES = main.c json_parser.c midi_handler.c frendo_core.c utils.c
@@ -34,7 +36,7 @@ $(TARGET): $(OBJECTS)
 $(OBJDIR)/%.o: $(SRCDIR)/%.c
 	@mkdir -p $(OBJDIR)
 	@echo "🔨 Compiling $<..."
-	$(CC) $(CFLAGS) -MMD -MP -c $< -o $@
+	$(CC) $(CFLAGS) -I$(SRCDIR) -MMD -MP -c $< -o $@
 
 # Inclure les dépendances si elles existent
 -include $(DEPENDS)
@@ -76,7 +78,7 @@ debug: clean $(TARGET)
 # Test de compilation sans erreurs
 test-compile: clean
 	@echo "🧪 Testing compilation..."
-	$(CC) $(CFLAGS) -c $(SOURCES)
+	$(CC) $(CFLAGS) -I$(SRCDIR) -c $(SRCDIR)/*.c
 	@echo "✅ All files compile without errors!"
 	rm -f *.o
 
@@ -114,6 +116,25 @@ check-virmidi:
 	@lsmod | grep virmidi && echo "✅ VirMIDI module is loaded" || echo "❌ VirMIDI module not loaded"
 	@echo "To load VirMIDI: sudo modprobe snd-virmidi midi_devs=1"
 
+# === WORKFLOW BITWIG ===
+
+# Convertir les exports MIDI de Bitwig
+bitwig-convert:
+	@echo "🎵 Converting Bitwig MIDI exports..."
+	@python3 $(TOOLSDIR)/quick-convert.py
+
+# Test rapide avec export Bitwig
+bitwig-test: $(TARGET) bitwig-convert
+	@echo "🚀 Testing Bitwig export..."
+	@./$(TARGET) sets/bitwig-export.json
+
+# Setup du workflow Bitwig
+bitwig-setup:
+	@echo "🎼 Setting up Bitwig workflow..."
+	@mkdir -p midi-exports sets
+	@pip install mido || echo "⚠️ Install mido manually: pip install mido"
+	@echo "✅ Ready! Export your MIDI files to midi-exports/ then run 'make bitwig-convert'"
+
 # === RÈGLES D'AIDE ===
 
 help:
@@ -138,6 +159,11 @@ help:
 	@echo "  midi-ports   List available MIDI ports"
 	@echo "  check-virmidi Check VirMIDI module status"
 	@echo ""
+	@echo "Bitwig Workflow:"
+	@echo "  bitwig-setup Setup Bitwig→Frendo workflow"
+	@echo "  bitwig-convert Convert MIDI exports to JSON"
+	@echo "  bitwig-test  Convert and test immediately"
+	@echo ""
 	@echo "Dependencies installation (Arch Linux):"
 	@echo "  sudo pacman -S base-devel alsa-lib cjson alsa-utils"
 	@echo ""
@@ -150,7 +176,7 @@ help:
 format:
 	@if command -v clang-format >/dev/null 2>&1; then \
 		echo "🎨 Formatting C code..."; \
-		clang-format -i *.c *.h; \
+		clang-format -i $(SRCDIR)/*.c $(SRCDIR)/*.h; \
 		echo "✅ Code formatted!"; \
 	else \
 		echo "⚠️ clang-format not found. Install with: sudo pacman -S clang"; \
@@ -160,7 +186,7 @@ format:
 analyze:
 	@if command -v cppcheck >/dev/null 2>&1; then \
 		echo "🔍 Running static analysis..."; \
-		cppcheck --enable=all --std=c99 *.c; \
+		cppcheck --enable=all --std=c99 -I$(SRCDIR) $(SRCDIR)/*.c; \
 		echo "✅ Analysis completed!"; \
 	else \
 		echo "⚠️ cppcheck not found. Install with: sudo pacman -S cppcheck"; \

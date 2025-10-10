@@ -1,2 +1,2 @@
-build/frendo_core.o: frendo_core.c basic_frendo.h
-basic_frendo.h:
+build/frendo_core.o: src/frendo_core.c src/basic_frendo.h
+src/basic_frendo.h:

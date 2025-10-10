@@ -1,2 +1,2 @@
-build/utils.o: utils.c basic_frendo.h
-basic_frendo.h:
+build/utils.o: src/utils.c src/basic_frendo.h
+src/basic_frendo.h:

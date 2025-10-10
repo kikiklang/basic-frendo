@@ -1,2 +1,2 @@
-build/json_parser.o: json_parser.c basic_frendo.h
-basic_frendo.h:
+build/json_parser.o: src/json_parser.c src/basic_frendo.h
+src/basic_frendo.h:
