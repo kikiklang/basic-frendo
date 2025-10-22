@@ -189,12 +189,14 @@ void process_midi_message(const snd_seq_event_t *event,
     // Traiter selon le canal MIDI
     switch (channel) {
         case 0:
-            // Channel 1 (index 0): Jouer la note bass suivante
-            play_bass_note(midi, song_set, state);
+            // Channel 1 (index 0): Jouer CAT et HAPINESSQUARE
+            play_CAT_note(midi, song_set, state);
+            play_HAPINESSQUARE_note(midi, song_set, state);
             break;
         case 1:
-            // Channel 2 (index 1): Jouer la note melody suivante
-            play_melody_note(midi, song_set, state);
+            // Channel 2 (index 1): Jouer MS20 et HAPINESTRIANGLE
+            play_MS20_note(midi, song_set, state);
+            play_HAPINESTRIANGLE_note(midi, song_set, state);
             break;
         case 2:
             // Channel 3 (index 2): Changer selon la note reçue

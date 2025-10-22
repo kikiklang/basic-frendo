@@ -28,19 +28,6 @@ static uint8_t json_to_midi_value(cJSON *json_item) {
         }
     }
     
-    // Si c'est une chaîne, essayer de la convertir en nombre
-    if (cJSON_IsString(json_item)) {
-        const char *str_value = cJSON_GetStringValue(json_item);
-        if (str_value && strlen(str_value) > 0) {
-            int midi_value = atoi(str_value);
-            if (midi_value >= 0 && midi_value <= 127) {
-                return (uint8_t)midi_value;
-            }
-        }
-        printf("[WARNING] Cannot convert '%s' to MIDI value, using 0 (silence)\n", str_value);
-        return 0;
-    }
-    
     printf("[WARNING] Invalid JSON type for MIDI note, using 0 (silence)\n");
     return 0;
 }
@@ -91,29 +78,53 @@ static frendo_error_t parse_song_part(cJSON *part_json, song_part_t *part) {
     
     // Initialiser la partie
     memset(part, 0, sizeof(song_part_t));
-    
-    // Parser la séquence de basse
-    cJSON *bass_json = cJSON_GetObjectItem(part_json, "bass");
-    if (bass_json) {
-        frendo_error_t result = parse_note_sequence(bass_json, &part->bass);
+
+    // Parser la séquence CAT
+    cJSON *cat_json = cJSON_GetObjectItem(part_json, "CAT");
+    if (cat_json) {
+        frendo_error_t result = parse_note_sequence(cat_json, &part->CAT);
         if (result != FRENDO_OK) {
-            printf("[ERROR] Failed to parse bass sequence\n");
+            printf("[ERROR] Failed to parse CAT sequence\n");
             return result;
         }
     } else {
-        printf("[WARNING] No bass sequence found in part\n");
+        printf("[WARNING] No CAT sequence found in part\n");
     }
-    
-    // Parser la séquence de mélodie
-    cJSON *melody_json = cJSON_GetObjectItem(part_json, "melody");
-    if (melody_json) {
-        frendo_error_t result = parse_note_sequence(melody_json, &part->melody);
+
+    // Parser la séquence MS20
+    cJSON *ms20_json = cJSON_GetObjectItem(part_json, "MS20");
+    if (ms20_json) {
+        frendo_error_t result = parse_note_sequence(ms20_json, &part->MS20);
         if (result != FRENDO_OK) {
-            printf("[ERROR] Failed to parse melody sequence\n");
+            printf("[ERROR] Failed to parse MS20 sequence\n");
             return result;
         }
     } else {
-        printf("[WARNING] No melody sequence found in part\n");
+        printf("[WARNING] No MS20 sequence found in part\n");
+    }
+
+    // Parser la séquence HAPINESTRIANGLE
+    cJSON *hapinestriangle_json = cJSON_GetObjectItem(part_json, "HAPINESTRIANGLE");
+    if (hapinestriangle_json) {
+        frendo_error_t result = parse_note_sequence(hapinestriangle_json, &part->HAPINESTRIANGLE);
+        if (result != FRENDO_OK) {
+            printf("[ERROR] Failed to parse HAPINESTRIANGLE sequence\n");
+            return result;
+        }
+    } else {
+        printf("[WARNING] No HAPINESTRIANGLE sequence found in part\n");
+    }
+
+    // Parser la séquence HAPINESSQUARE
+    cJSON *hapinessquare_json = cJSON_GetObjectItem(part_json, "HAPINESSQUARE");
+    if (hapinessquare_json) {
+        frendo_error_t result = parse_note_sequence(hapinessquare_json, &part->HAPINESSQUARE);
+        if (result != FRENDO_OK) {
+            printf("[ERROR] Failed to parse HAPINESSQUARE sequence\n");
+            return result;
+        }
+    } else {
+        printf("[WARNING] No HAPINESSQUARE sequence found in part\n");
     }
     
     return FRENDO_OK;
@@ -268,11 +279,12 @@ void print_song_set_info(const song_set_t *song_set) {
     for (int i = 0; i < song_set->song_count; i++) {
         const song_t *song = &song_set->songs[i];
         printf("Song %d: %s (%d parts)\n", i + 1, song->name, song->part_count);
-        
+
         for (int j = 0; j < song->part_count; j++) {
             const song_part_t *part = &song->parts[j];
-            printf("  Part %d: Bass[%d notes] Melody[%d notes]\n", 
-                   j + 1, part->bass.count, part->melody.count);
+            printf("  Part %d: CAT[%d notes] MS20[%d notes] HAPINESTRIANGLE[%d notes] HAPINESSQUARE[%d notes]\n",
+                   j + 1, part->CAT.count, part->MS20.count,
+                   part->HAPINESTRIANGLE.count, part->HAPINESSQUARE.count);
         }
         printf("\n");
     }

@@ -149,16 +149,20 @@ int main(int argc, char *argv[]) {
     // Initialiser l'état du système
     state.song_index = 0;
     state.part_index = 0;
-    state.bass_note_index = 0;
-    state.melody_note_index = 0;
-    
+    state.cat_note_index = 0;
+    state.ms20_note_index = 0;
+    state.hapinestriangle_note_index = 0;
+    state.hapinessquare_note_index = 0;
+
     printf("[INIT] Initial state:\n");
-    printf("       Song: '%s' (1/%d)\n", 
+    printf("       Song: '%s' (1/%d)\n",
            song_set.songs[0].name, song_set.song_count);
     printf("       Part: 1/%d\n", song_set.songs[0].part_count);
-    printf("       Bass notes: %d, Melody notes: %d\n",
-           song_set.songs[0].parts[0].bass.count,
-           song_set.songs[0].parts[0].melody.count);
+    printf("       CAT notes: %d, MS20 notes: %d, HAPINESTRIANGLE notes: %d, HAPINESSQUARE notes: %d\n",
+           song_set.songs[0].parts[0].CAT.count,
+           song_set.songs[0].parts[0].MS20.count,
+           song_set.songs[0].parts[0].HAPINESTRIANGLE.count,
+           song_set.songs[0].parts[0].HAPINESSQUARE.count);
     
     // === 5. BOUCLE PRINCIPALE ===
     

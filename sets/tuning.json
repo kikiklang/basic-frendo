@@ -1,0 +1,17 @@
+{
+  "songs": [
+    {
+      "name": "TUNING SYNTH - A 440Hz",
+      "parts": [
+        {
+          "bass": [
+            69
+          ],
+          "melody": [
+            69
+          ]
+        }
+      ]
+    }
+  ]
+}

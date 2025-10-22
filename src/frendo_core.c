@@ -10,15 +10,17 @@
 #include "basic_frendo.h"
 
 /**
- * Remet à zéro les indices de notes (bass et melody)
+ * Remet à zéro les indices de notes (tous les synthés)
  * Appelé lors du changement de chanson ou de partie
  */
 void reset_note_indices(frendo_state_t *state) {
     if (!state) return;
-    
-    state->bass_note_index = 0;
-    state->melody_note_index = 0;
-    
+
+    state->cat_note_index = 0;
+    state->ms20_note_index = 0;
+    state->hapinestriangle_note_index = 0;
+    state->hapinessquare_note_index = 0;
+
     printf("[STATE] Note indices reset to 0\n");
 }
 
@@ -84,107 +86,209 @@ void update_part(frendo_state_t *state, const song_set_t *song_set) {
 }
 
 /**
- * Joue la note bass suivante de la séquence courante
- * Canal MIDI 0 - Déclenché par les notes sur canal 0
+ * Joue la note CAT suivante de la séquence courante
+ * Canal MIDI out 3 - Déclenché par les notes sur canal in 0
  */
-void play_bass_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
     if (!midi || !song_set || !state) {
         return;
     }
-    
+
     // Vérifier la validité des indices
     if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n", 
+        printf("[ERROR] Invalid song index: %d (max: %d)\n",
                state->song_index, song_set->song_count - 1);
         return;
     }
-    
+
     const song_t *current_song = &song_set->songs[state->song_index];
-    
+
     if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n", 
+        printf("[ERROR] Invalid part index: %d (max: %d)\n",
                state->part_index, current_song->part_count - 1);
         return;
     }
-    
+
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *bass_seq = &current_part->bass;
-    
+    const note_sequence_t *cat_seq = &current_part->CAT;
+
     // Vérifier qu'il y a des notes dans la séquence
-    if (bass_seq->count == 0) {
-        printf("[WARNING] No bass notes in current part\n");
+    if (cat_seq->count == 0) {
+        printf("[WARNING] No CAT notes in current part\n");
         return;
     }
-    
+
     // Obtenir la note courante
-    uint8_t note = bass_seq->notes[state->bass_note_index];
-    
-    // Envoyer la note sur le canal 0
-    send_midi_note(midi, 3, note); // Canal 5 (index 3)
-    // Log supprimé pour éviter le doublon
-    
+    uint8_t note = cat_seq->notes[state->cat_note_index];
+
+    // Envoyer la note sur le canal MIDI out 3
+    send_midi_note(midi, 3, note);
+
     // Avancer dans la séquence
-    state->bass_note_index++;
-    
+    state->cat_note_index++;
+
     // Revenir au début si on a atteint la fin
-    if (state->bass_note_index >= bass_seq->count) {
-        state->bass_note_index = 0;
-        printf("[INFO] Bass sequence looped back to start\n");
+    if (state->cat_note_index >= cat_seq->count) {
+        state->cat_note_index = 0;
+        printf("[INFO] CAT sequence looped back to start\n");
     }
-    
-    printf("[STATE] Bass note index: %d/%d\n", 
-           state->bass_note_index, bass_seq->count);
+
+    printf("[STATE] CAT note index: %d/%d\n",
+           state->cat_note_index, cat_seq->count);
 }
 
 /**
- * Joue la note melody suivante de la séquence courante
- * Canal MIDI 1 - Déclenché par les notes sur canal 1
+ * Joue la note MS20 suivante de la séquence courante
+ * Canal MIDI out 4 - Déclenché par les notes sur canal in 1
  */
-void play_melody_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
     if (!midi || !song_set || !state) {
         return;
     }
-    
+
     // Vérifier la validité des indices
     if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n", 
+        printf("[ERROR] Invalid song index: %d (max: %d)\n",
                state->song_index, song_set->song_count - 1);
         return;
     }
-    
+
     const song_t *current_song = &song_set->songs[state->song_index];
-    
+
     if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n", 
+        printf("[ERROR] Invalid part index: %d (max: %d)\n",
                state->part_index, current_song->part_count - 1);
         return;
     }
-    
+
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *melody_seq = &current_part->melody;
-    
+    const note_sequence_t *ms20_seq = &current_part->MS20;
+
     // Vérifier qu'il y a des notes dans la séquence
-    if (melody_seq->count == 0) {
-        printf("[WARNING] No melody notes in current part\n");
+    if (ms20_seq->count == 0) {
+        printf("[WARNING] No MS20 notes in current part\n");
         return;
     }
-    
+
     // Obtenir la note courante
-    uint8_t note = melody_seq->notes[state->melody_note_index];
-    
-    // Envoyer la note sur le canal 1
-    send_midi_note(midi, 4, note); // Canal 6 (index 4)
-    // Log supprimé pour éviter le doublon
-    
+    uint8_t note = ms20_seq->notes[state->ms20_note_index];
+
+    // Envoyer la note sur le canal MIDI out 4
+    send_midi_note(midi, 4, note);
+
     // Avancer dans la séquence
-    state->melody_note_index++;
-    
+    state->ms20_note_index++;
+
     // Revenir au début si on a atteint la fin
-    if (state->melody_note_index >= melody_seq->count) {
-        state->melody_note_index = 0;
-        printf("[INFO] Melody sequence looped back to start\n");
+    if (state->ms20_note_index >= ms20_seq->count) {
+        state->ms20_note_index = 0;
+        printf("[INFO] MS20 sequence looped back to start\n");
     }
-    
-    printf("[STATE] Melody note index: %d/%d\n", 
-           state->melody_note_index, melody_seq->count);
+
+    printf("[STATE] MS20 note index: %d/%d\n",
+           state->ms20_note_index, ms20_seq->count);
+}
+
+/**
+ * Joue la note HAPINESTRIANGLE suivante de la séquence courante
+ * Canal MIDI out 5 - Déclenché par les notes sur canal in 1
+ */
+void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+    if (!midi || !song_set || !state) {
+        return;
+    }
+
+    // Vérifier la validité des indices
+    if (state->song_index >= song_set->song_count) {
+        printf("[ERROR] Invalid song index: %d (max: %d)\n",
+               state->song_index, song_set->song_count - 1);
+        return;
+    }
+
+    const song_t *current_song = &song_set->songs[state->song_index];
+
+    if (state->part_index >= current_song->part_count) {
+        printf("[ERROR] Invalid part index: %d (max: %d)\n",
+               state->part_index, current_song->part_count - 1);
+        return;
+    }
+
+    const song_part_t *current_part = &current_song->parts[state->part_index];
+    const note_sequence_t *hapinestriangle_seq = &current_part->HAPINESTRIANGLE;
+
+    // Vérifier qu'il y a des notes dans la séquence
+    if (hapinestriangle_seq->count == 0) {
+        printf("[WARNING] No HAPINESTRIANGLE notes in current part\n");
+        return;
+    }
+
+    // Obtenir la note courante
+    uint8_t note = hapinestriangle_seq->notes[state->hapinestriangle_note_index];
+
+    // Envoyer la note sur le canal MIDI out 5
+    send_midi_note(midi, 5, note);
+
+    // Avancer dans la séquence
+    state->hapinestriangle_note_index++;
+
+    // Revenir au début si on a atteint la fin
+    if (state->hapinestriangle_note_index >= hapinestriangle_seq->count) {
+        state->hapinestriangle_note_index = 0;
+        printf("[INFO] HAPINESTRIANGLE sequence looped back to start\n");
+    }
+
+    printf("[STATE] HAPINESTRIANGLE note index: %d/%d\n",
+           state->hapinestriangle_note_index, hapinestriangle_seq->count);
+}
+
+/**
+ * Joue la note HAPINESSQUARE suivante de la séquence courante
+ * Canal MIDI out 6 - Déclenché par les notes sur canal in 0
+ */
+void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+    if (!midi || !song_set || !state) {
+        return;
+    }
+
+    // Vérifier la validité des indices
+    if (state->song_index >= song_set->song_count) {
+        printf("[ERROR] Invalid song index: %d (max: %d)\n",
+               state->song_index, song_set->song_count - 1);
+        return;
+    }
+
+    const song_t *current_song = &song_set->songs[state->song_index];
+
+    if (state->part_index >= current_song->part_count) {
+        printf("[ERROR] Invalid part index: %d (max: %d)\n",
+               state->part_index, current_song->part_count - 1);
+        return;
+    }
+
+    const song_part_t *current_part = &current_song->parts[state->part_index];
+    const note_sequence_t *hapinessquare_seq = &current_part->HAPINESSQUARE;
+
+    // Vérifier qu'il y a des notes dans la séquence
+    if (hapinessquare_seq->count == 0) {
+        printf("[WARNING] No HAPINESSQUARE notes in current part\n");
+        return;
+    }
+
+    // Obtenir la note courante
+    uint8_t note = hapinessquare_seq->notes[state->hapinessquare_note_index];
+
+    // Envoyer la note sur le canal MIDI out 6
+    send_midi_note(midi, 6, note);
+
+    // Avancer dans la séquence
+    state->hapinessquare_note_index++;
+
+    // Revenir au début si on a atteint la fin
+    if (state->hapinessquare_note_index >= hapinessquare_seq->count) {
+        state->hapinessquare_note_index = 0;
+        printf("[INFO] HAPINESSQUARE sequence looped back to start\n");
+    }
+
+    printf("[STATE] HAPINESSQUARE note index: %d/%d\n",
+           state->hapinessquare_note_index, hapinessquare_seq->count);
 }

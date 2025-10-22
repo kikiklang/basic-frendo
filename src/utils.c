@@ -8,11 +8,6 @@
 #include <ctype.h>
 
 /**
- * Note: La conversion nom de note -> MIDI n'est plus nécessaire
- * Les fichiers JSON contiennent maintenant directement les valeurs MIDI (0-127)
- */
-
-/**
  * Convertit un code d'erreur en chaîne lisible
  */
 const char* error_to_string(frendo_error_t error) {
@@ -44,5 +39,6 @@ void print_banner(void) {
  * Affiche un changement d'état avec formatage spécial
  */
 void print_state_change(void) {
+    printf("═══════════════════════════════════════════\n");
     printf("═══════════════════════════════════════════\n");
 }

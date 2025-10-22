@@ -44,8 +44,10 @@ typedef struct {
 
 // Structure pour une partie d'une chanson
 typedef struct {
-    note_sequence_t bass;     // Séquence de basse (canal 0)
-    note_sequence_t melody;   // Séquence de mélodie (canal 1)
+    note_sequence_t CAT;              // Séquence CAT (canal MIDI out 3)
+    note_sequence_t MS20;             // Séquence MS20 (canal MIDI out 4)
+    note_sequence_t HAPINESTRIANGLE;  // Séquence HAPINESTRIANGLE (canal MIDI out 5)
+    note_sequence_t HAPINESSQUARE;    // Séquence HAPINESSQUARE (canal MIDI out 6)
 } song_part_t;
 
 // Structure pour une chanson complète
@@ -63,10 +65,12 @@ typedef struct {
 
 // État global du système
 typedef struct {
-    int song_index;        // Index de la chanson courante
-    int part_index;        // Index de la partie courante
-    int bass_note_index;   // Position dans la séquence bass
-    int melody_note_index; // Position dans la séquence melody
+    int song_index;                  // Index de la chanson courante
+    int part_index;                  // Index de la partie courante
+    int cat_note_index;              // Position dans la séquence CAT
+    int ms20_note_index;             // Position dans la séquence MS20
+    int hapinestriangle_note_index;  // Position dans la séquence HAPINESTRIANGLE
+    int hapinessquare_note_index;    // Position dans la séquence HAPINESSQUARE
 } frendo_state_t;
 
 // Structure pour l'interface ALSA
@@ -97,8 +101,10 @@ void cleanup_midi_interface(midi_interface_t *midi);
 void reset_note_indices(frendo_state_t *state);
 void update_song(frendo_state_t *state, const song_set_t *song_set);
 void update_part(frendo_state_t *state, const song_set_t *song_set);
-void play_bass_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
-void play_melody_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
+void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
+void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
+void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
+void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 
 // utils.c
 const char* error_to_string(frendo_error_t error);
