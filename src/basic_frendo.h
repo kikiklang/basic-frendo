@@ -48,6 +48,7 @@ typedef struct {
     note_sequence_t MS20;             // Séquence MS20 (canal MIDI out 4)
     note_sequence_t HAPINESTRIANGLE;  // Séquence HAPINESTRIANGLE (canal MIDI out 5)
     note_sequence_t HAPINESSQUARE;    // Séquence HAPINESSQUARE (canal MIDI out 6)
+    note_sequence_t SAMPLER;          // Séquence SAMPLER (canal MIDI out 7)
 } song_part_t;
 
 // Structure pour une chanson complète
@@ -71,6 +72,7 @@ typedef struct {
     int ms20_note_index;             // Position dans la séquence MS20
     int hapinestriangle_note_index;  // Position dans la séquence HAPINESTRIANGLE
     int hapinessquare_note_index;    // Position dans la séquence HAPINESSQUARE
+    int sampler_note_index;          // Position dans la séquence SAMPLER
 } frendo_state_t;
 
 // Structure pour l'interface ALSA
@@ -105,6 +107,7 @@ void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t 
 void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
+void play_SAMPLER_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 
 // utils.c
 const char* error_to_string(frendo_error_t error);

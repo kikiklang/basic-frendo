@@ -153,26 +153,24 @@ int main(int argc, char *argv[]) {
     state.ms20_note_index = 0;
     state.hapinestriangle_note_index = 0;
     state.hapinessquare_note_index = 0;
+    state.sampler_note_index = 0;
 
     printf("[INIT] Initial state:\n");
     printf("       Song: '%s' (1/%d)\n",
            song_set.songs[0].name, song_set.song_count);
     printf("       Part: 1/%d\n", song_set.songs[0].part_count);
-    printf("       CAT notes: %d, MS20 notes: %d, HAPINESTRIANGLE notes: %d, HAPINESSQUARE notes: %d\n",
+    printf("       CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLER[%d]\n",
            song_set.songs[0].parts[0].CAT.count,
            song_set.songs[0].parts[0].MS20.count,
            song_set.songs[0].parts[0].HAPINESTRIANGLE.count,
-           song_set.songs[0].parts[0].HAPINESSQUARE.count);
+           song_set.songs[0].parts[0].HAPINESSQUARE.count,
+           song_set.songs[0].parts[0].SAMPLER.count);
     
     // === 5. BOUCLE PRINCIPALE ===
     
     printf("\n[READY] Basic Frendo is ready to play!\n");
     printf("─────────────────────────────────────────\n");
-    printf("MIDI Channels (dans Bitwig):\n");
-    printf("  • Channel 1: Trigger next BASS note\n");
-    printf("  • Channel 2: Trigger next MELODY note\n");
-    printf("  • Channel 3: Switch to next SONG\n");
-    printf("─────────────────────────────────────────\n");
+
     
     // Entrer dans la boucle d'écoute MIDI
     midi_loop(&g_midi, &song_set, &state);

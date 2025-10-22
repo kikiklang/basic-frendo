@@ -20,6 +20,7 @@ void reset_note_indices(frendo_state_t *state) {
     state->ms20_note_index = 0;
     state->hapinestriangle_note_index = 0;
     state->hapinessquare_note_index = 0;
+    state->sampler_note_index = 0;
 
     printf("[STATE] Note indices reset to 0\n");
 }
@@ -291,4 +292,56 @@ void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frend
 
     printf("[STATE] HAPINESSQUARE note index: %d/%d\n",
            state->hapinessquare_note_index, hapinessquare_seq->count);
+}
+
+/**
+ * Joue la note SAMPLER suivante de la séquence courante
+ * Canal MIDI out 7 - Déclenché par les notes sur canal in 1
+ */
+void play_SAMPLER_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+    if (!midi || !song_set || !state) {
+        return;
+    }
+
+    // Vérifier la validité des indices
+    if (state->song_index >= song_set->song_count) {
+        printf("[ERROR] Invalid song index: %d (max: %d)\n",
+               state->song_index, song_set->song_count - 1);
+        return;
+    }
+
+    const song_t *current_song = &song_set->songs[state->song_index];
+
+    if (state->part_index >= current_song->part_count) {
+        printf("[ERROR] Invalid part index: %d (max: %d)\n",
+               state->part_index, current_song->part_count - 1);
+        return;
+    }
+
+    const song_part_t *current_part = &current_song->parts[state->part_index];
+    const note_sequence_t *sampler_seq = &current_part->SAMPLER;
+
+    // Vérifier qu'il y a des notes dans la séquence
+    if (sampler_seq->count == 0) {
+        printf("[WARNING] No SAMPLER notes in current part\n");
+        return;
+    }
+
+    // Obtenir la note courante
+    uint8_t note = sampler_seq->notes[state->sampler_note_index];
+
+    // Envoyer la note sur le canal MIDI out 7
+    send_midi_note(midi, 7, note);
+
+    // Avancer dans la séquence
+    state->sampler_note_index++;
+
+    // Revenir au début si on a atteint la fin
+    if (state->sampler_note_index >= sampler_seq->count) {
+        state->sampler_note_index = 0;
+        printf("[INFO] SAMPLER sequence looped back to start\n");
+    }
+
+    printf("[STATE] SAMPLER note index: %d/%d\n",
+           state->sampler_note_index, sampler_seq->count);
 }

@@ -194,9 +194,10 @@ void process_midi_message(const snd_seq_event_t *event,
             play_HAPINESSQUARE_note(midi, song_set, state);
             break;
         case 1:
-            // Channel 2 (index 1): Jouer MS20 et HAPINESTRIANGLE
+            // Channel 2 (index 1): Jouer MS20, HAPINESTRIANGLE et SAMPLER
             play_MS20_note(midi, song_set, state);
             play_HAPINESTRIANGLE_note(midi, song_set, state);
+            play_SAMPLER_note(midi, song_set, state);
             break;
         case 2:
             // Channel 3 (index 2): Changer selon la note reçue

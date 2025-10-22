@@ -126,7 +126,19 @@ static frendo_error_t parse_song_part(cJSON *part_json, song_part_t *part) {
     } else {
         printf("[WARNING] No HAPINESSQUARE sequence found in part\n");
     }
-    
+
+    // Parser la séquence SAMPLER
+    cJSON *sampler_json = cJSON_GetObjectItem(part_json, "SAMPLER");
+    if (sampler_json) {
+        frendo_error_t result = parse_note_sequence(sampler_json, &part->SAMPLER);
+        if (result != FRENDO_OK) {
+            printf("[ERROR] Failed to parse SAMPLER sequence\n");
+            return result;
+        }
+    } else {
+        printf("[WARNING] No SAMPLER sequence found in part\n");
+    }
+
     return FRENDO_OK;
 }
 
@@ -282,9 +294,9 @@ void print_song_set_info(const song_set_t *song_set) {
 
         for (int j = 0; j < song->part_count; j++) {
             const song_part_t *part = &song->parts[j];
-            printf("  Part %d: CAT[%d notes] MS20[%d notes] HAPINESTRIANGLE[%d notes] HAPINESSQUARE[%d notes]\n",
+            printf("  Part %d: CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLER[%d]\n",
                    j + 1, part->CAT.count, part->MS20.count,
-                   part->HAPINESTRIANGLE.count, part->HAPINESSQUARE.count);
+                   part->HAPINESTRIANGLE.count, part->HAPINESSQUARE.count, part->SAMPLER.count);
         }
         printf("\n");
     }
