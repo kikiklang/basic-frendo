@@ -1,0 +1,7 @@
+INPUTS
+  kick = channel:0
+  snare = channel:1
+
+PART
+  CAT[kick]: 69
+  MS20[snare]: 69

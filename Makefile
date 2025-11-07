@@ -1,21 +1,19 @@
 # Makefile for Basic Frendo C version
-# Optimisé pour Arch Linux avec ALSA et cJSON
+# Optimisé pour Arch Linux avec ALSA
 
 # === CONFIGURATION ===
 CC = gcc
 CFLAGS = -Wall -Wextra -std=c99 -O2 -g -D_DEFAULT_SOURCE
-LIBS = -lasound -lcjson -lpthread
+LIBS = -lasound -lpthread
 TARGET = basic-frendo
 
 # Répertoires
 SRCDIR = src
 OBJDIR = build
 SETSDIR = sets
-TOOLSDIR = tools
-DOCSDIR = docs
 
 # Fichiers sources
-SOURCES = main.c json_parser.c midi_handler.c frendo_core.c utils.c
+SOURCES = main.c frendo_parser.c midi_handler.c frendo_core.c utils.c
 OBJECTS = $(SOURCES:%.c=$(OBJDIR)/%.o)
 DEPENDS = $(OBJECTS:.o=.d)
 
@@ -88,9 +86,6 @@ deps:
 	@echo "Checking for ALSA development files..."
 	@pkg-config --exists alsa || (echo "❌ ALSA dev files missing. Install with: sudo pacman -S alsa-lib" && exit 1)
 	@echo "✅ ALSA found: $$(pkg-config --modversion alsa)"
-	@echo "Checking for cJSON..."
-	@pkg-config --exists libcjson || (echo "❌ cJSON missing. Install with: sudo pacman -S cjson" && exit 1)
-	@echo "✅ cJSON found: $$(pkg-config --modversion libcjson)"
 	@echo "Checking for VirMIDI module..."
 	@lsmod | grep -q virmidi && echo "✅ VirMIDI module loaded" || echo "⚠️ VirMIDI not loaded. Load with: sudo modprobe snd-virmidi midi_devs=1"
 	@echo "✅ All dependencies checked!"
@@ -116,25 +111,6 @@ check-virmidi:
 	@lsmod | grep virmidi && echo "✅ VirMIDI module is loaded" || echo "❌ VirMIDI module not loaded"
 	@echo "To load VirMIDI: sudo modprobe snd-virmidi midi_devs=1"
 
-# === WORKFLOW BITWIG ===
-
-# Convertir les exports MIDI de Bitwig
-bitwig-convert:
-	@echo "🎵 Converting Bitwig MIDI exports..."
-	@python3 $(TOOLSDIR)/quick-convert.py
-
-# Test rapide avec export Bitwig
-bitwig-test: $(TARGET) bitwig-convert
-	@echo "🚀 Testing Bitwig export..."
-	@./$(TARGET) sets/bitwig-export.json
-
-# Setup du workflow Bitwig
-bitwig-setup:
-	@echo "🎼 Setting up Bitwig workflow..."
-	@mkdir -p midi-exports sets
-	@pip install mido || echo "⚠️ Install mido manually: pip install mido"
-	@echo "✅ Ready! Export your MIDI files to midi-exports/ then run 'make bitwig-convert'"
-
 # === RÈGLES D'AIDE ===
 
 help:
@@ -146,7 +122,6 @@ help:
 	@echo "  clean        Remove build files"
 	@echo "  run          Build and run the program"
 	@echo "  debug        Build with debug symbols"
-
 	@echo ""
 	@echo "Installation:"
 	@echo "  install      Install to /usr/local/bin"
@@ -159,13 +134,8 @@ help:
 	@echo "  midi-ports   List available MIDI ports"
 	@echo "  check-virmidi Check VirMIDI module status"
 	@echo ""
-	@echo "Bitwig Workflow:"
-	@echo "  bitwig-setup Setup Bitwig→Frendo workflow"
-	@echo "  bitwig-convert Convert MIDI exports to JSON"
-	@echo "  bitwig-test  Convert and test immediately"
-	@echo ""
 	@echo "Dependencies installation (Arch Linux):"
-	@echo "  sudo pacman -S base-devel alsa-lib cjson alsa-utils"
+	@echo "  sudo pacman -S base-devel alsa-lib alsa-utils"
 	@echo ""
 	@echo "VirMIDI setup:"
 	@echo "  sudo modprobe snd-virmidi midi_devs=1"

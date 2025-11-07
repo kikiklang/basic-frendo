@@ -182,37 +182,50 @@ void process_midi_message(const snd_seq_event_t *event,
     if (velocity == 0) {
         return;
     }
-    
-    printf("[MIDI IN]  Channel: %d | Note: %d | Velocity: %d\n", 
-           channel, note, velocity);
-    
-    // Traiter selon le canal MIDI
-    switch (channel) {
-        case 0:
-            // Channel 1 (index 0): Jouer CAT, HAPINESSQUARE et SAMPLERFX
-            play_CAT_note(midi, song_set, state);
-            play_HAPINESSQUARE_note(midi, song_set, state);
-            play_SAMPLERFX_note(midi, song_set, state);
-            break;
-        case 1:
-            // Channel 2 (index 1): Jouer MS20, HAPINESTRIANGLE et SAMPLERVOICE
-            play_MS20_note(midi, song_set, state);
-            play_HAPINESTRIANGLE_note(midi, song_set, state);
-            play_SAMPLERVOICE_note(midi, song_set, state);
-            break;
-        case 2:
-            // Channel 3 (index 2): Changer selon la note reçue
-            if (note == 48) {
-                update_song(state, song_set);
-            } else if (note == 49) {
-                update_part(state, song_set);
-            }
-            break;
-        default:
-            // Autres canaux ignorés
-            printf("[INFO] Ignored MIDI on channel %d\n", channel);
-            break;
+
+    printf("[MIDI IN]  Channel: %d | Note: %d\n", channel, note);
+
+    // Canal 2 note 48/49 = contrôles (changement song/part)
+    if (channel == 2) {
+        if (note == 48) {
+            update_song(state, song_set);
+        } else if (note == 49) {
+            update_part(state, song_set);
+        }
+        printf("─────────────────────────────────────────\n");
+        return;
     }
+
+    // Vérifier indices valides
+    if (state->song_index >= song_set->song_count) {
+        return;
+    }
+    const song_t *current_song = &song_set->songs[state->song_index];
+    if (state->part_index >= current_song->part_count) {
+        return;
+    }
+    const song_part_t *current_part = &current_song->parts[state->part_index];
+
+    // Routing dynamique : jouer toutes les tracks qui écoutent ce canal
+    if (current_part->CAT.sequence.count > 0 && current_part->CAT.listen_channel == channel) {
+        play_CAT_note(midi, song_set, state);
+    }
+    if (current_part->MS20.sequence.count > 0 && current_part->MS20.listen_channel == channel) {
+        play_MS20_note(midi, song_set, state);
+    }
+    if (current_part->HAPINESTRIANGLE.sequence.count > 0 && current_part->HAPINESTRIANGLE.listen_channel == channel) {
+        play_HAPINESTRIANGLE_note(midi, song_set, state);
+    }
+    if (current_part->HAPINESSQUARE.sequence.count > 0 && current_part->HAPINESSQUARE.listen_channel == channel) {
+        play_HAPINESSQUARE_note(midi, song_set, state);
+    }
+    if (current_part->SAMPLERVOICE.sequence.count > 0 && current_part->SAMPLERVOICE.listen_channel == channel) {
+        play_SAMPLERVOICE_note(midi, song_set, state);
+    }
+    if (current_part->SAMPLERFX.sequence.count > 0 && current_part->SAMPLERFX.listen_channel == channel) {
+        play_SAMPLERFX_note(midi, song_set, state);
+    }
+
     printf("─────────────────────────────────────────\n");
 }
 

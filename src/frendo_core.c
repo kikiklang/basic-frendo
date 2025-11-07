@@ -112,7 +112,7 @@ void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t 
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *cat_seq = &current_part->CAT;
+    const note_sequence_t *cat_seq = &current_part->CAT.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
     if (cat_seq->count == 0) {
@@ -159,7 +159,7 @@ void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *ms20_seq = &current_part->MS20;
+    const note_sequence_t *ms20_seq = &current_part->MS20.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
     if (ms20_seq->count == 0) {
@@ -206,7 +206,7 @@ void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, fre
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *hapinestriangle_seq = &current_part->HAPINESTRIANGLE;
+    const note_sequence_t *hapinestriangle_seq = &current_part->HAPINESTRIANGLE.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
     if (hapinestriangle_seq->count == 0) {
@@ -253,7 +253,7 @@ void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frend
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *hapinessquare_seq = &current_part->HAPINESSQUARE;
+    const note_sequence_t *hapinessquare_seq = &current_part->HAPINESSQUARE.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
     if (hapinessquare_seq->count == 0) {
@@ -300,7 +300,7 @@ void play_SAMPLERVOICE_note(midi_interface_t *midi, song_set_t *song_set, frendo
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *samplervoice_seq = &current_part->SAMPLERVOICE;
+    const note_sequence_t *samplervoice_seq = &current_part->SAMPLERVOICE.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
     if (samplervoice_seq->count == 0) {
@@ -347,7 +347,7 @@ void play_SAMPLERFX_note(midi_interface_t *midi, song_set_t *song_set, frendo_st
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *samplerfx_seq = &current_part->SAMPLERFX;
+    const note_sequence_t *samplerfx_seq = &current_part->SAMPLERFX.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
     if (samplerfx_seq->count == 0) {

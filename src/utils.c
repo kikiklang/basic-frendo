@@ -40,5 +40,4 @@ void print_banner(void) {
  */
 void print_state_change(void) {
     printf("═══════════════════════════════════════════\n");
-    printf("═══════════════════════════════════════════\n");
 }

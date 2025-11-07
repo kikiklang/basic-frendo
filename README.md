@@ -48,19 +48,21 @@ Bitwig Studio (lecture des séquences)
 basic-frendo/
 ├── � src/                     # Code source C
 │   ├── main.c                  # Programme principal
-│   ├── basic_frendo.h          # Déclarations communes  
-│   ├── json_parser.c           # Parseur JSON
+│   ├── basic_frendo.h          # Déclarations communes
+│   ├── frendo_parser.c         # Parseur format .frendo
 │   ├── midi_handler.c          # Interface ALSA
 │   ├── frendo_core.c           # Logique métier
 │   └── utils.c                 # Utilitaires
-├── � tools/                   # Outils Python Bitwig
-│   ├── bitwig-to-frendo.py     # Convertisseur avancé
-│   └── quick-convert.py        # Conversion rapide
 ├── � docs/                    # Documentation
 │   ├── INSTALL-arch.md         # Installation Arch
 │   └── BITWIG-WORKFLOW.md      # Workflow Bitwig
-├── 📂 sets/                    # Fichiers de sets JSON
-│   └── ido-entroido-2025.json  # Exemple de set
+├── 📂 sets/                    # Fichiers de sets .frendo
+│   ├── ido-entroido-2025/      # Set concert Entroido
+│   │   ├── song1.frendo
+│   │   ├── song2.frendo
+│   │   └── song3.frendo
+│   └── tuning/                 # Set accordage
+│       └── a440.frendo
 ├── � build/                   # Fichiers de compilation
 ├── � Makefile                 # Build system
 └── 📖 README.md                # Cette documentation
@@ -71,9 +73,7 @@ basic-frendo/
 ### Organisation modulaire
 
 - **`src/`** : Code source C organisé en modules fonctionnels
-- **`tools/`** : Scripts Python pour le workflow Bitwig→Frendo  
-- **`docs/`** : Documentation technique et guides d'utilisation
-- **`sets/`** : Fichiers JSON de configuration musicale
+- **`sets/`** : Fichiers .frendo de configuration musicale (un répertoire par set)
 - **`build/`** : Artefacts de compilation (généré automatiquement)
 
 ## 🚀 Installation et configuration
@@ -87,8 +87,8 @@ sudo pacman -Syu
 # Outils de développement (si pas déjà installés)
 sudo pacman -S base-devel
 
-# Bibliothèques ALSA et JSON
-sudo pacman -S alsa-lib cjson
+# Bibliothèque ALSA
+sudo pacman -S alsa-lib
 
 # Utilitaires MIDI (pour tests et debug)
 sudo pacman -S alsa-utils
@@ -158,8 +158,17 @@ bitwig-studio
 #### 3. Lancement de Basic Frendo C
 
 ```bash
-# Terminal 2 : Lancer Basic Frendo avec un fichier de set
-./basic-frendo sets/ido-entroido-2025.json
+# Terminal 2 : Lancer Basic Frendo
+./basic-frendo
+
+# Le programme affiche un menu interactif :
+Available sets:
+  1. ido-entroido-2025 (3 songs)
+  2. tuning (1 song)
+
+Select set [1-2]: 1
+
+# Le set complet est chargé en mémoire
 ```
 
 #### 4. Test du système
@@ -182,33 +191,42 @@ aseqdump -p 24:0
 | **3** | 2 | Tom/Crash | **Song** | Passe à la chanson suivante dans le set |
 | **4** | 3 | Ride/Hi-hat | **Part** | Passe à la partie suivante de la chanson |
 
-### Format des fichiers de sets
+### Format des fichiers .frendo
 
-```json
-{
-  "songs": [
-    {
-      "name": "Ma Chanson",
-      "parts": [
-        {
-          "bass": [61, 68, 61, 68, 73],        // Séquence bass (notes MIDI 0-127)
-          "melody": [73, 68, 58, 60, 62]       // Séquence melody (notes MIDI 0-127)
-        },
-        {
-          "bass": [48, 55, 48, 55],            // Partie 2 - bass différent
-          "melody": [84, 81, 77, 74]           // Partie 2 - melody différent  
-        }
-      ]
-    }
-  ]
-}
+Basic Frendo utilise un format custom `.frendo` optimisé pour la lisibilité et la performance :
+
+```frendo
+INPUTS
+  kick = channel:0
+  snare = channel:1
+
+PART
+  CAT[kick]: 48 50 52 55 | 60 62 64 67
+  MS20[snare]: 36 38 40 42
+  HAPINESTRIANGLE[snare]: 72 74 76 79
+  HAPINESSQUARE[kick]: 84 86 88 91
+
+PART
+  CAT[kick]: 36 38 40 42
+  MS20[snare]: 48 50 52 55
 ```
 
-**Notes importantes** :
-- Les valeurs sont des **nombres MIDI directs** (0-127)
-- `0` = note silencieuse (pas de son)
-- `60` = DO central (C4)
+**Caractéristiques** :
+- **Un fichier par chanson** : `sets/nom-du-set/chanson.frendo`
+- **INPUTS** : Définit le mapping canal MIDI → nom symbolique
+- **PART** : Chaque partie peut avoir plusieurs tracks
+- **TRACK[input]** : Format `TRACKNAME[input]: notes`
+- Les **`|`** sont optionnels (séparateurs visuels ignorés)
+- **Valeurs MIDI directes** (0-127) : `0` = silence, `60` = DO central (C4)
 - Les séquences bouclent automatiquement
+
+**Tracks disponibles** :
+- **CAT** → Canal MIDI sortie 3
+- **MS20** → Canal MIDI sortie 4
+- **HAPINESTRIANGLE** → Canal MIDI sortie 5
+- **HAPINESSQUARE** → Canal MIDI sortie 6
+- **SAMPLERVOICE** → Canal MIDI sortie 7
+- **SAMPLERFX** → Canal MIDI sortie 8
 
 ## 🧪 Tests et validation
 
@@ -274,68 +292,39 @@ aconnect -d 14:0 24:0   # Supprimer
 # Debug avec gdb (version debug)
 make debug
 gdb ./basic-frendo
-(gdb) run sets/ido-entroido-2025.json
+(gdb) run
 ```
 
-## 🔧 Développement et personnalisation  
+## 🔧 Développement et personnalisation
 
-### Ajout de nouvelles chansons
+### Créer un nouveau set
 
-1. **Créer un nouveau fichier JSON** dans `sets/` :
+1. **Créer un nouveau répertoire** :
 ```bash
-cp sets/ido-entroido-2025.json sets/ma-nouvelle-chanson.json
+mkdir sets/mon-nouveau-set
 ```
 
-2. **Éditer le contenu** avec vos séquences :
-```json
-{
-  "songs": [
-    {
-      "name": "Ma Chanson Rock",
-      "parts": [
-        {
-          "bass": [36, 38, 36, 42],     // Pattern rock basique
-          "melody": [60, 62, 64, 67]    // Mélodie simple
-        }
-      ]
-    }
-  ]
-}
-```
-
-3. **Lancer avec le nouveau set** :
+2. **Créer vos fichiers .frendo** :
 ```bash
-./basic-frendo sets/ma-nouvelle-chanson.json
+nano sets/mon-nouveau-set/chanson1.frendo
 ```
 
-### Extension du code
+Exemple de contenu :
+```frendo
+INPUTS
+  kick = channel:0
+  snare = channel:1
 
-#### Ajouter de nouveaux canaux MIDI
+PART
+  CAT[kick]: 36 38 40 42 | 48 50 52 55
+  MS20[snare]: 60 62 64 67
 
-1. **Modifier** `midi_handler.c`, fonction `process_midi_message()` :
-```c
-case 5:  // Nouveau canal 5
-    play_percussion_note(midi, song_set, state);
-    break;
+PART
+  CAT[kick]: 48 50 52 55
+  HAPINESSQUARE[kick]: 72 74 76 79
 ```
 
-2. **Ajouter la logique** dans `frendo_core.c` :
-```c
-void play_percussion_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
-    // Votre logique ici
-}
-```
-
-#### Ajouter de nouveaux formats de séquence
-
-Modifier `json_parser.c` pour supporter d'autres champs JSON :
-```c
-// Ajouter dans parse_song_part()
-cJSON *percussion_json = cJSON_GetObjectItem(part_json, "percussion");
-if (percussion_json) {
-    parse_note_sequence(percussion_json, &part->percussion);
-}
-```
+3. **Lancer Basic Frendo** et sélectionner votre nouveau set dans le menu
 
 ## � Déploiement multi-distribution
 
@@ -369,17 +358,19 @@ lsmod | grep virmidi
 ### Utilisation
 
 ```bash
-# Usage : basic-frendo <fichier-de-set.json>
+# Lancer Basic Frendo
+./basic-frendo
 
-# Avec chemin relatif (depuis le dossier du projet)
-basic-frendo sets/ido-entroido-2025.json
+# Le programme affiche un menu interactif pour sélectionner le set :
+Available sets:
+  1. ido-entroido-2025 (3 songs)
+  2. tuning (1 song)
 
-# Avec chemin absolu (depuis n'importe où après installation)
-basic-frendo ~/Music/basic-frendo-sets/ido-entroido-2025.json
+Select set [1-2]: 1
 
-# Affichage d'aide si arguments incorrects
-basic-frendo
-# Sortie : Usage: basic-frendo <song-set-file.json>
+# Le set complet est chargé en mémoire
+# Changement de chanson : canal MIDI 2, note 48
+# Changement de partie : canal MIDI 2, note 49
 ```
 
 ### Workflow de développement Arch
@@ -389,13 +380,13 @@ basic-frendo
 git clone <repo> && cd basic-frendo
 
 # 2. Installation des dépendances
-sudo pacman -S base-devel alsa-lib cjson alsa-utils
+sudo pacman -S base-devel alsa-lib alsa-utils
 
 # 3. Configuration VirMIDI
 sudo modprobe snd-virmidi midi_devs=1
 
 # 4. Test et développement
-make && ./basic-frendo sets/ido-entroido-2025.json
+make && ./basic-frendo
 
 # 5. Installation système (quand satisfait)
 sudo make install
@@ -443,7 +434,3 @@ ldd ./basic-frendo
 Le code est volontairement **pédagogique et commenté** pour faciliter l'apprentissage du C et d'ALSA.
 
 ---
-
-**Bon live ! 🎵🥁**
-
-*Pour toute question technique, consulter `docs/INSTALL-arch.md` et `docs/BITWIG-WORKFLOW.md`.*

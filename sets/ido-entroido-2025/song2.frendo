@@ -1,0 +1,10 @@
+INPUTS
+  kick = channel:0
+  snare = channel:1
+
+PART
+  CAT[kick]: 54 42
+  HAPINESSQUARE[kick]: 54 42
+
+PART
+  CAT[kick]: 66 54 66 54 66 54 66 54 70 58 70 58 70 58 68 67

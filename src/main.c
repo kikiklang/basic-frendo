@@ -82,49 +82,64 @@ int main(int argc, char *argv[]) {
     frendo_error_t result;
     song_set_t song_set;
     frendo_state_t state = {0}; // Initialiser tout à zéro
-    char set_filename[MAX_FILENAME_LENGTH] = {0};
-    
+
     // Afficher la bannière
     print_banner();
-    
+
     // Installer le gestionnaire de signal pour arrêt propre
     signal(SIGINT, signal_handler);
     signal(SIGTERM, signal_handler);
-    
-    // === 1. VÉRIFICATION DES ARGUMENTS ===
-    
-    if (argc != 2) {
-        printf("[ERROR] Usage: %s <song-set-file.json>\n", argv[0]);
-        printf("[INFO] Example: %s sets/ido-entroido-2025.json\n", argv[0]);
+
+    // === 1. SÉLECTION DU SET ===
+
+    printf("\n[INIT] Scanning sets directory...\n");
+
+    char set_names[MAX_SONGS][MAX_NAME_LENGTH];
+    int set_count = list_available_sets("sets", set_names, MAX_SONGS);
+
+    if (set_count == 0) {
+        printf("[ERROR] No sets found in 'sets/' directory\n");
+        printf("[HELP] Create a set directory in 'sets/' with .frendo files\n");
         return EXIT_FAILURE;
     }
-    
-    strncpy(set_filename, argv[1], sizeof(set_filename) - 1);
-    set_filename[sizeof(set_filename) - 1] = '\0';
-    printf("[INIT] Using song set file: %s\n", set_filename);
-    
-    // Utiliser le chemin tel quel (pas de préfixe automatique)
-    char full_path[MAX_FILENAME_LENGTH];
-    strncpy(full_path, set_filename, sizeof(full_path) - 1);
-    full_path[sizeof(full_path) - 1] = '\0';
-    
-    // === 2. CHARGEMENT DU FICHIER DE SET ===
-    
-    result = load_song_set(full_path, &song_set);
+
+    printf("\nAvailable sets:\n");
+    for (int i = 0; i < set_count; i++) {
+        printf("  %d. %s\n", i + 1, set_names[i]);
+    }
+
+    int selection = 0;
+    printf("\nSelect set [1-%d]: ", set_count);
+    if (scanf("%d", &selection) != 1 || selection < 1 || selection > set_count) {
+        printf("[ERROR] Invalid selection\n");
+        return EXIT_FAILURE;
+    }
+
+    // Construire le chemin du set sélectionné
+    char set_path[MAX_FILENAME_LENGTH];
+    snprintf(set_path, sizeof(set_path), "sets/%s", set_names[selection - 1]);
+
+    printf("\n[INIT] Loading set: %s\n", set_names[selection - 1]);
+
+    // === 2. CHARGEMENT DU SET ===
+
+    result = load_frendo_set(set_path, &song_set);
     if (result != FRENDO_OK) {
-        printf("[ERROR] Failed to load song set: %s\n", error_to_string(result));
-        printf("[HELP] Make sure the file exists and has valid JSON format\n");
+        printf("[ERROR] Failed to load set: %s\n", error_to_string(result));
         return EXIT_FAILURE;
     }
-    
-    // Afficher les informations du set chargé
-    print_song_set_info(&song_set);
-    
+
     if (song_set.song_count == 0) {
-        printf("[ERROR] No songs found in the set file\n");
+        printf("[ERROR] No songs found in the set\n");
         return EXIT_FAILURE;
     }
-    
+
+    printf("[INFO] Set loaded: %d songs\n", song_set.song_count);
+    for (int i = 0; i < song_set.song_count; i++) {
+        printf("       %d. %s\n", i + 1, song_set.songs[i].name);
+    }
+    printf("\n");
+
     // === 3. INITIALISATION MIDI ===
     
     printf("[INIT] Initializing MIDI interface...\n");
@@ -161,12 +176,12 @@ int main(int argc, char *argv[]) {
            song_set.songs[0].name, song_set.song_count);
     printf("       Part: 1/%d\n", song_set.songs[0].part_count);
     printf("       CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
-           song_set.songs[0].parts[0].CAT.count,
-           song_set.songs[0].parts[0].MS20.count,
-           song_set.songs[0].parts[0].HAPINESTRIANGLE.count,
-           song_set.songs[0].parts[0].HAPINESSQUARE.count,
-           song_set.songs[0].parts[0].SAMPLERVOICE.count,
-           song_set.songs[0].parts[0].SAMPLERFX.count);
+           song_set.songs[0].parts[0].CAT.sequence.count,
+           song_set.songs[0].parts[0].MS20.sequence.count,
+           song_set.songs[0].parts[0].HAPINESTRIANGLE.sequence.count,
+           song_set.songs[0].parts[0].HAPINESSQUARE.sequence.count,
+           song_set.songs[0].parts[0].SAMPLERVOICE.sequence.count,
+           song_set.songs[0].parts[0].SAMPLERFX.sequence.count);
     
     // === 5. BOUCLE PRINCIPALE ===
     

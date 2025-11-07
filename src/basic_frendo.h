@@ -42,14 +42,20 @@ typedef struct {
     int count;                         // Nombre de notes dans la séquence
 } note_sequence_t;
 
+// Structure pour une track avec routing MIDI
+typedef struct {
+    note_sequence_t sequence;    // Séquence de notes
+    uint8_t listen_channel;      // Canal MIDI d'entrée qui déclenche cette track
+} track_t;
+
 // Structure pour une partie d'une chanson
 typedef struct {
-    note_sequence_t CAT;              // Séquence CAT (canal MIDI out 3)
-    note_sequence_t MS20;             // Séquence MS20 (canal MIDI out 4)
-    note_sequence_t HAPINESTRIANGLE;  // Séquence HAPINESTRIANGLE (canal MIDI out 5)
-    note_sequence_t HAPINESSQUARE;    // Séquence HAPINESSQUARE (canal MIDI out 6)
-    note_sequence_t SAMPLERVOICE;     // Séquence SAMPLERVOICE (canal MIDI out 7)
-    note_sequence_t SAMPLERFX;        // Séquence SAMPLERFX (canal MIDI out 8)
+    track_t CAT;              // Séquence CAT (canal MIDI out 3)
+    track_t MS20;             // Séquence MS20 (canal MIDI out 4)
+    track_t HAPINESTRIANGLE;  // Séquence HAPINESTRIANGLE (canal MIDI out 5)
+    track_t HAPINESSQUARE;    // Séquence HAPINESSQUARE (canal MIDI out 6)
+    track_t SAMPLERVOICE;     // Séquence SAMPLERVOICE (canal MIDI out 7)
+    track_t SAMPLERFX;        // Séquence SAMPLERFX (canal MIDI out 8)
 } song_part_t;
 
 // Structure pour une chanson complète
@@ -87,8 +93,9 @@ typedef struct {
 
 // Fonctions principales (définies dans leurs fichiers respectifs)
 
-// json_parser.c
-frendo_error_t load_song_set(const char *filename, song_set_t *song_set);
+// frendo_parser.c
+frendo_error_t load_frendo_set(const char *directory, song_set_t *song_set);
+int list_available_sets(const char *sets_dir, char set_names[][MAX_NAME_LENGTH], int max_sets);
 void print_song_set_info(const song_set_t *song_set);
 
 // midi_handler.c
