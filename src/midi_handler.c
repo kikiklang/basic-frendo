@@ -189,15 +189,16 @@ void process_midi_message(const snd_seq_event_t *event,
     // Traiter selon le canal MIDI
     switch (channel) {
         case 0:
-            // Channel 1 (index 0): Jouer CAT et HAPINESSQUARE
+            // Channel 1 (index 0): Jouer CAT, HAPINESSQUARE et SAMPLERFX
             play_CAT_note(midi, song_set, state);
             play_HAPINESSQUARE_note(midi, song_set, state);
+            play_SAMPLERFX_note(midi, song_set, state);
             break;
         case 1:
-            // Channel 2 (index 1): Jouer MS20, HAPINESTRIANGLE et SAMPLER
+            // Channel 2 (index 1): Jouer MS20, HAPINESTRIANGLE et SAMPLERVOICE
             play_MS20_note(midi, song_set, state);
             play_HAPINESTRIANGLE_note(midi, song_set, state);
-            play_SAMPLER_note(midi, song_set, state);
+            play_SAMPLERVOICE_note(midi, song_set, state);
             break;
         case 2:
             // Channel 3 (index 2): Changer selon la note reçue
@@ -218,56 +219,56 @@ void process_midi_message(const snd_seq_event_t *event,
 /**
  * Envoie une note MIDI (NOTE ON suivi de NOTE OFF)
  */
-void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note) {
+void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const char *track_name, int note_index, int total_notes) {
     if (!midi || !midi->seq_handle) {
         return;
     }
-    
+
     // Ignorer les notes à 0 (silence)
     if (note == 0) {
-        printf("[MIDI OUT] Channel: %d | Silent note (skipped)\n", channel);
+        printf("[MIDI OUT] %s | Channel: %d | Silent note (skipped)\n", track_name, channel);
         return;
     }
-    
+
     snd_seq_event_t ev;
     snd_seq_ev_clear(&ev);
-    
+
     // Configurer l'événement NOTE ON
     snd_seq_ev_set_source(&ev, midi->output_port);
     snd_seq_ev_set_subs(&ev);
     snd_seq_ev_set_direct(&ev);
-    
+
     ev.type = SND_SEQ_EVENT_NOTEON;
     ev.data.note.channel = channel;
     ev.data.note.note = note;
     ev.data.note.velocity = MIDI_VELOCITY;
-    
+
     // Envoyer NOTE ON
     int result = snd_seq_event_output(midi->seq_handle, &ev);
     if (result < 0) {
         printf("[ERROR] Failed to send NOTE ON: %s\n", snd_strerror(result));
         return;
     }
-    
+
     // Forcer l'envoi immédiat
     snd_seq_drain_output(midi->seq_handle);
-    
-    printf("[MIDI OUT] Channel: %d | Note: %d | Velocity: %d\n", 
-           channel, note, MIDI_VELOCITY);
-    
+
+    printf("[MIDI OUT] %s | Channel: %d | Note: %d | Index %d/%d\n",
+           track_name, channel, note, note_index, total_notes);
+
     // Attendre un court délai (10ms comme dans la version Node.js)
     usleep(10000); // 10ms = 10000 microsecondes
-    
+
     // Configurer et envoyer NOTE OFF
     ev.type = SND_SEQ_EVENT_NOTEOFF;
     ev.data.note.velocity = 0;
-    
+
     result = snd_seq_event_output(midi->seq_handle, &ev);
     if (result < 0) {
         printf("[ERROR] Failed to send NOTE OFF: %s\n", snd_strerror(result));
         return;
     }
-    
+
     snd_seq_drain_output(midi->seq_handle);
 }
 

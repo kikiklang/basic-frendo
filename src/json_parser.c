@@ -87,8 +87,6 @@ static frendo_error_t parse_song_part(cJSON *part_json, song_part_t *part) {
             printf("[ERROR] Failed to parse CAT sequence\n");
             return result;
         }
-    } else {
-        printf("[WARNING] No CAT sequence found in part\n");
     }
 
     // Parser la séquence MS20
@@ -99,8 +97,6 @@ static frendo_error_t parse_song_part(cJSON *part_json, song_part_t *part) {
             printf("[ERROR] Failed to parse MS20 sequence\n");
             return result;
         }
-    } else {
-        printf("[WARNING] No MS20 sequence found in part\n");
     }
 
     // Parser la séquence HAPINESTRIANGLE
@@ -111,8 +107,6 @@ static frendo_error_t parse_song_part(cJSON *part_json, song_part_t *part) {
             printf("[ERROR] Failed to parse HAPINESTRIANGLE sequence\n");
             return result;
         }
-    } else {
-        printf("[WARNING] No HAPINESTRIANGLE sequence found in part\n");
     }
 
     // Parser la séquence HAPINESSQUARE
@@ -123,20 +117,26 @@ static frendo_error_t parse_song_part(cJSON *part_json, song_part_t *part) {
             printf("[ERROR] Failed to parse HAPINESSQUARE sequence\n");
             return result;
         }
-    } else {
-        printf("[WARNING] No HAPINESSQUARE sequence found in part\n");
     }
 
-    // Parser la séquence SAMPLER
-    cJSON *sampler_json = cJSON_GetObjectItem(part_json, "SAMPLER");
-    if (sampler_json) {
-        frendo_error_t result = parse_note_sequence(sampler_json, &part->SAMPLER);
+    // Parser la séquence SAMPLERVOICE
+    cJSON *samplervoice_json = cJSON_GetObjectItem(part_json, "SAMPLERVOICE");
+    if (samplervoice_json) {
+        frendo_error_t result = parse_note_sequence(samplervoice_json, &part->SAMPLERVOICE);
         if (result != FRENDO_OK) {
-            printf("[ERROR] Failed to parse SAMPLER sequence\n");
+            printf("[ERROR] Failed to parse SAMPLERVOICE sequence\n");
             return result;
         }
-    } else {
-        printf("[WARNING] No SAMPLER sequence found in part\n");
+    }
+
+    // Parser la séquence SAMPLERFX
+    cJSON *samplerfx_json = cJSON_GetObjectItem(part_json, "SAMPLERFX");
+    if (samplerfx_json) {
+        frendo_error_t result = parse_note_sequence(samplerfx_json, &part->SAMPLERFX);
+        if (result != FRENDO_OK) {
+            printf("[ERROR] Failed to parse SAMPLERFX sequence\n");
+            return result;
+        }
     }
 
     return FRENDO_OK;
@@ -294,9 +294,9 @@ void print_song_set_info(const song_set_t *song_set) {
 
         for (int j = 0; j < song->part_count; j++) {
             const song_part_t *part = &song->parts[j];
-            printf("  Part %d: CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLER[%d]\n",
+            printf("  Part %d: CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
                    j + 1, part->CAT.count, part->MS20.count,
-                   part->HAPINESTRIANGLE.count, part->HAPINESSQUARE.count, part->SAMPLER.count);
+                   part->HAPINESTRIANGLE.count, part->HAPINESSQUARE.count, part->SAMPLERVOICE.count, part->SAMPLERFX.count);
         }
         printf("\n");
     }

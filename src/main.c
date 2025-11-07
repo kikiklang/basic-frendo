@@ -153,18 +153,20 @@ int main(int argc, char *argv[]) {
     state.ms20_note_index = 0;
     state.hapinestriangle_note_index = 0;
     state.hapinessquare_note_index = 0;
-    state.sampler_note_index = 0;
+    state.samplervoice_note_index = 0;
+    state.samplerfx_note_index = 0;
 
     printf("[INIT] Initial state:\n");
     printf("       Song: '%s' (1/%d)\n",
            song_set.songs[0].name, song_set.song_count);
     printf("       Part: 1/%d\n", song_set.songs[0].part_count);
-    printf("       CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLER[%d]\n",
+    printf("       CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
            song_set.songs[0].parts[0].CAT.count,
            song_set.songs[0].parts[0].MS20.count,
            song_set.songs[0].parts[0].HAPINESTRIANGLE.count,
            song_set.songs[0].parts[0].HAPINESSQUARE.count,
-           song_set.songs[0].parts[0].SAMPLER.count);
+           song_set.songs[0].parts[0].SAMPLERVOICE.count,
+           song_set.songs[0].parts[0].SAMPLERFX.count);
     
     // === 5. BOUCLE PRINCIPALE ===
     

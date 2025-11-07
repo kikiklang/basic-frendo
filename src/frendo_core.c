@@ -20,7 +20,8 @@ void reset_note_indices(frendo_state_t *state) {
     state->ms20_note_index = 0;
     state->hapinestriangle_note_index = 0;
     state->hapinessquare_note_index = 0;
-    state->sampler_note_index = 0;
+    state->samplervoice_note_index = 0;
+    state->samplerfx_note_index = 0;
 
     printf("[STATE] Note indices reset to 0\n");
 }
@@ -115,15 +116,11 @@ void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t 
 
     // Vérifier qu'il y a des notes dans la séquence
     if (cat_seq->count == 0) {
-        printf("[WARNING] No CAT notes in current part\n");
         return;
     }
 
     // Obtenir la note courante
     uint8_t note = cat_seq->notes[state->cat_note_index];
-
-    // Envoyer la note sur le canal MIDI out 3
-    send_midi_note(midi, 3, note);
 
     // Avancer dans la séquence
     state->cat_note_index++;
@@ -131,11 +128,10 @@ void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t 
     // Revenir au début si on a atteint la fin
     if (state->cat_note_index >= cat_seq->count) {
         state->cat_note_index = 0;
-        printf("[INFO] CAT sequence looped back to start\n");
     }
 
-    printf("[STATE] CAT note index: %d/%d\n",
-           state->cat_note_index, cat_seq->count);
+    // Envoyer la note sur le canal MIDI out 3
+    send_midi_note(midi, 3, note, "CAT", state->cat_note_index, cat_seq->count);
 }
 
 /**
@@ -167,15 +163,11 @@ void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
 
     // Vérifier qu'il y a des notes dans la séquence
     if (ms20_seq->count == 0) {
-        printf("[WARNING] No MS20 notes in current part\n");
         return;
     }
 
     // Obtenir la note courante
     uint8_t note = ms20_seq->notes[state->ms20_note_index];
-
-    // Envoyer la note sur le canal MIDI out 4
-    send_midi_note(midi, 4, note);
 
     // Avancer dans la séquence
     state->ms20_note_index++;
@@ -183,11 +175,10 @@ void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
     // Revenir au début si on a atteint la fin
     if (state->ms20_note_index >= ms20_seq->count) {
         state->ms20_note_index = 0;
-        printf("[INFO] MS20 sequence looped back to start\n");
     }
 
-    printf("[STATE] MS20 note index: %d/%d\n",
-           state->ms20_note_index, ms20_seq->count);
+    // Envoyer la note sur le canal MIDI out 4
+    send_midi_note(midi, 4, note, "MS20", state->ms20_note_index, ms20_seq->count);
 }
 
 /**
@@ -219,15 +210,11 @@ void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, fre
 
     // Vérifier qu'il y a des notes dans la séquence
     if (hapinestriangle_seq->count == 0) {
-        printf("[WARNING] No HAPINESTRIANGLE notes in current part\n");
         return;
     }
 
     // Obtenir la note courante
     uint8_t note = hapinestriangle_seq->notes[state->hapinestriangle_note_index];
-
-    // Envoyer la note sur le canal MIDI out 5
-    send_midi_note(midi, 5, note);
 
     // Avancer dans la séquence
     state->hapinestriangle_note_index++;
@@ -235,11 +222,10 @@ void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, fre
     // Revenir au début si on a atteint la fin
     if (state->hapinestriangle_note_index >= hapinestriangle_seq->count) {
         state->hapinestriangle_note_index = 0;
-        printf("[INFO] HAPINESTRIANGLE sequence looped back to start\n");
     }
 
-    printf("[STATE] HAPINESTRIANGLE note index: %d/%d\n",
-           state->hapinestriangle_note_index, hapinestriangle_seq->count);
+    // Envoyer la note sur le canal MIDI out 5
+    send_midi_note(midi, 5, note, "HAPINESTRIANGLE", state->hapinestriangle_note_index, hapinestriangle_seq->count);
 }
 
 /**
@@ -271,15 +257,11 @@ void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frend
 
     // Vérifier qu'il y a des notes dans la séquence
     if (hapinessquare_seq->count == 0) {
-        printf("[WARNING] No HAPINESSQUARE notes in current part\n");
         return;
     }
 
     // Obtenir la note courante
     uint8_t note = hapinessquare_seq->notes[state->hapinessquare_note_index];
-
-    // Envoyer la note sur le canal MIDI out 6
-    send_midi_note(midi, 6, note);
 
     // Avancer dans la séquence
     state->hapinessquare_note_index++;
@@ -287,18 +269,17 @@ void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frend
     // Revenir au début si on a atteint la fin
     if (state->hapinessquare_note_index >= hapinessquare_seq->count) {
         state->hapinessquare_note_index = 0;
-        printf("[INFO] HAPINESSQUARE sequence looped back to start\n");
     }
 
-    printf("[STATE] HAPINESSQUARE note index: %d/%d\n",
-           state->hapinessquare_note_index, hapinessquare_seq->count);
+    // Envoyer la note sur le canal MIDI out 6
+    send_midi_note(midi, 6, note, "HAPINESSQUARE", state->hapinessquare_note_index, hapinessquare_seq->count);
 }
 
 /**
- * Joue la note SAMPLER suivante de la séquence courante
+ * Joue la note SAMPLERVOICE suivante de la séquence courante
  * Canal MIDI out 7 - Déclenché par les notes sur canal in 1
  */
-void play_SAMPLER_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+void play_SAMPLERVOICE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
     if (!midi || !song_set || !state) {
         return;
     }
@@ -319,29 +300,71 @@ void play_SAMPLER_note(midi_interface_t *midi, song_set_t *song_set, frendo_stat
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *sampler_seq = &current_part->SAMPLER;
+    const note_sequence_t *samplervoice_seq = &current_part->SAMPLERVOICE;
 
     // Vérifier qu'il y a des notes dans la séquence
-    if (sampler_seq->count == 0) {
-        printf("[WARNING] No SAMPLER notes in current part\n");
+    if (samplervoice_seq->count == 0) {
         return;
     }
 
     // Obtenir la note courante
-    uint8_t note = sampler_seq->notes[state->sampler_note_index];
-
-    // Envoyer la note sur le canal MIDI out 7
-    send_midi_note(midi, 7, note);
+    uint8_t note = samplervoice_seq->notes[state->samplervoice_note_index];
 
     // Avancer dans la séquence
-    state->sampler_note_index++;
+    state->samplervoice_note_index++;
 
     // Revenir au début si on a atteint la fin
-    if (state->sampler_note_index >= sampler_seq->count) {
-        state->sampler_note_index = 0;
-        printf("[INFO] SAMPLER sequence looped back to start\n");
+    if (state->samplervoice_note_index >= samplervoice_seq->count) {
+        state->samplervoice_note_index = 0;
     }
 
-    printf("[STATE] SAMPLER note index: %d/%d\n",
-           state->sampler_note_index, sampler_seq->count);
+    // Envoyer la note sur le canal MIDI out 7
+    send_midi_note(midi, 7, note, "SAMPLERVOICE", state->samplervoice_note_index, samplervoice_seq->count);
+}
+
+/**
+ * Joue la note SAMPLERFX suivante de la séquence courante
+ * Canal MIDI out 8 - Déclenché par les notes sur canal in 0
+ */
+void play_SAMPLERFX_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+    if (!midi || !song_set || !state) {
+        return;
+    }
+
+    // Vérifier la validité des indices
+    if (state->song_index >= song_set->song_count) {
+        printf("[ERROR] Invalid song index: %d (max: %d)\n",
+               state->song_index, song_set->song_count - 1);
+        return;
+    }
+
+    const song_t *current_song = &song_set->songs[state->song_index];
+
+    if (state->part_index >= current_song->part_count) {
+        printf("[ERROR] Invalid part index: %d (max: %d)\n",
+               state->part_index, current_song->part_count - 1);
+        return;
+    }
+
+    const song_part_t *current_part = &current_song->parts[state->part_index];
+    const note_sequence_t *samplerfx_seq = &current_part->SAMPLERFX;
+
+    // Vérifier qu'il y a des notes dans la séquence
+    if (samplerfx_seq->count == 0) {
+        return;
+    }
+
+    // Obtenir la note courante
+    uint8_t note = samplerfx_seq->notes[state->samplerfx_note_index];
+
+    // Avancer dans la séquence
+    state->samplerfx_note_index++;
+
+    // Revenir au début si on a atteint la fin
+    if (state->samplerfx_note_index >= samplerfx_seq->count) {
+        state->samplerfx_note_index = 0;
+    }
+
+    // Envoyer la note sur le canal MIDI out 8
+    send_midi_note(midi, 8, note, "SAMPLERFX", state->samplerfx_note_index, samplerfx_seq->count);
 }

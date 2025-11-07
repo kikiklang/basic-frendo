@@ -4,10 +4,10 @@
       "name": "TUNING SYNTH - A 440Hz",
       "parts": [
         {
-          "bass": [
+          "CAT": [
             69
           ],
-          "melody": [
+          "MS20": [
             69
           ]
         }
