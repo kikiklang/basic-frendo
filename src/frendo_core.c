@@ -48,12 +48,15 @@ void update_song(frendo_state_t *state, const song_set_t *song_set) {
     reset_note_indices(state);
     
     // Afficher le changement
-    // plus besoin de song_name
+    printf("\n");
     print_state_change();
-    
-    printf("[STATE] Song: %d/%d | Part: %d/%d\n", 
-           state->song_index + 1, song_set->song_count,
+    printf("[SONG CHANGE] → %s (%d/%d)\n",
+           song_set->songs[state->song_index].name,
+           state->song_index + 1, song_set->song_count);
+    printf("[PART]        → Part %d/%d\n",
            state->part_index + 1, song_set->songs[state->song_index].part_count);
+    print_state_change();
+    printf("\n");
 }
 
 /**
@@ -79,12 +82,13 @@ void update_part(frendo_state_t *state, const song_set_t *song_set) {
     reset_note_indices(state);
     
     // Afficher le changement
-    // plus besoin de part_info
+    printf("\n");
     print_state_change();
-    
-    printf("[STATE] Song: %d/%d | Part: %d/%d\n", 
-           state->song_index + 1, song_set->song_count,
+    printf("[PART CHANGE] → %s - Part %d/%d\n",
+           current_song->name,
            state->part_index + 1, current_song->part_count);
+    print_state_change();
+    printf("\n");
 }
 
 /**

@@ -108,8 +108,22 @@ static frendo_error_t parse_input_line(const char *line, parser_context_t *ctx, 
 }
 
 /**
+ * Fisher-Yates shuffle pour randomiser un tableau de notes
+ */
+static void shuffle_notes(uint8_t *notes, int count) {
+    for (int i = count - 1; i > 0; i--) {
+        int j = rand() % (i + 1);
+        uint8_t temp = notes[i];
+        notes[i] = notes[j];
+        notes[j] = temp;
+    }
+}
+
+/**
  * Parse une séquence de notes MIDI depuis une chaîne
  * Format: "48 50 52 | 55 60 62"
+ * Supporte aussi les ranges: "[1..16]" génère 1 2 3 4 5 ... 16
+ * Supporte aussi les ranges randomisés: "R[1..16]" génère 1..16 dans un ordre aléatoire
  * Les | sont ignorés
  */
 static frendo_error_t parse_note_sequence(const char *str, note_sequence_t *seq, int line_num) {
@@ -124,8 +138,93 @@ static frendo_error_t parse_note_sequence(const char *str, note_sequence_t *seq,
 
         if (!*p) break;
 
+        // Détecter range randomisé R[start..end] ou range normal [start..end]
+        if (*p == 'R' && *(p + 1) == '[') {
+            // Range randomisé
+            int start, end;
+            const char *range_end = strchr(p, ']');
+
+            if (!range_end) {
+                printf("[ERROR] Missing closing ']' in random range at line %d\n", line_num);
+                return FRENDO_ERROR_JSON;
+            }
+
+            if (sscanf(p, "R[%d..%d]", &start, &end) == 2) {
+                // Valider les valeurs MIDI
+                if (start < 0 || start > 127 || end < 0 || end > 127) {
+                    printf("[ERROR] Invalid MIDI range R[%d..%d] at line %d (must be 0-127)\n",
+                           start, end, line_num);
+                    return FRENDO_ERROR_JSON;
+                }
+
+                // Générer la séquence (toujours ascendante pour le random)
+                int range_start = (start <= end) ? start : end;
+                int range_end_val = (start <= end) ? end : start;
+                int temp_count = 0;
+
+                for (int note = range_start; note <= range_end_val; note++) {
+                    if (note_count + temp_count >= MAX_NOTES_PER_SEQ) {
+                        printf("[ERROR] Too many notes (max %d) at line %d\n",
+                               MAX_NOTES_PER_SEQ, line_num);
+                        return FRENDO_ERROR_JSON;
+                    }
+                    seq->notes[note_count + temp_count] = (uint8_t)note;
+                    temp_count++;
+                }
+
+                // Randomiser uniquement les notes générées
+                shuffle_notes(&seq->notes[note_count], temp_count);
+                note_count += temp_count;
+
+                // Avancer le pointeur après le ']'
+                p = range_end + 1;
+            } else {
+                printf("[ERROR] Invalid random range syntax at line %d (expected R[N..M])\n", line_num);
+                return FRENDO_ERROR_JSON;
+            }
+        }
+        // Détecter range normal [start..end]
+        else if (*p == '[') {
+            int start, end;
+            const char *range_end = strchr(p, ']');
+
+            if (!range_end) {
+                printf("[ERROR] Missing closing ']' in range at line %d\n", line_num);
+                return FRENDO_ERROR_JSON;
+            }
+
+            if (sscanf(p, "[%d..%d]", &start, &end) == 2) {
+                // Valider les valeurs MIDI
+                if (start < 0 || start > 127 || end < 0 || end > 127) {
+                    printf("[ERROR] Invalid MIDI range [%d..%d] at line %d (must be 0-127)\n",
+                           start, end, line_num);
+                    return FRENDO_ERROR_JSON;
+                }
+
+                // Générer la séquence (ascendant ou descendant)
+                int step = (start <= end) ? 1 : -1;
+                for (int note = start;
+                     (step > 0 && note <= end) || (step < 0 && note >= end);
+                     note += step) {
+
+                    if (note_count >= MAX_NOTES_PER_SEQ) {
+                        printf("[ERROR] Too many notes (max %d) at line %d\n",
+                               MAX_NOTES_PER_SEQ, line_num);
+                        return FRENDO_ERROR_JSON;
+                    }
+
+                    seq->notes[note_count++] = (uint8_t)note;
+                }
+
+                // Avancer le pointeur après le ']'
+                p = range_end + 1;
+            } else {
+                printf("[ERROR] Invalid range syntax at line %d (expected [N..M])\n", line_num);
+                return FRENDO_ERROR_JSON;
+            }
+        }
         // Parser un nombre
-        if (isdigit(*p)) {
+        else if (isdigit(*p)) {
             int value = 0;
             while (isdigit(*p)) {
                 value = value * 10 + (*p - '0');

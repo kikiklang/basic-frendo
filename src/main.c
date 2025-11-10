@@ -11,6 +11,8 @@
 #include <signal.h>
 #include <poll.h>
 #include <unistd.h>
+#include <time.h>
+#include <stdlib.h>
 
 // Variables globales pour la gestion propre de l'arrêt
 static midi_interface_t g_midi;
@@ -82,6 +84,9 @@ int main(int argc, char *argv[]) {
     frendo_error_t result;
     song_set_t song_set;
     frendo_state_t state = {0}; // Initialiser tout à zéro
+
+    // Initialiser le générateur de nombres aléatoires
+    srand(time(NULL));
 
     // Afficher la bannière
     print_banner();
