@@ -169,7 +169,7 @@ int main(int argc, char *argv[]) {
     // Initialiser l'état du système
     state.song_index = 0;
     state.part_index = 0;
-    state.cat_note_index = 0;
+    state.bass_note_index = 0;
     state.ms20_note_index = 0;
     state.hapinestriangle_note_index = 0;
     state.hapinessquare_note_index = 0;
@@ -180,8 +180,8 @@ int main(int argc, char *argv[]) {
     printf("       Song: '%s' (1/%d)\n",
            song_set.songs[0].name, song_set.song_count);
     printf("       Part: 1/%d\n", song_set.songs[0].part_count);
-    printf("       CAT[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
-           song_set.songs[0].parts[0].CAT.sequence.count,
+    printf("       BASS[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
+           song_set.songs[0].parts[0].BASS.sequence.count,
            song_set.songs[0].parts[0].MS20.sequence.count,
            song_set.songs[0].parts[0].HAPINESTRIANGLE.sequence.count,
            song_set.songs[0].parts[0].HAPINESSQUARE.sequence.count,

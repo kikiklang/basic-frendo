@@ -16,12 +16,17 @@
 void reset_note_indices(frendo_state_t *state) {
     if (!state) return;
 
-    state->cat_note_index = 0;
+    state->bass_note_index = 0;
     state->ms20_note_index = 0;
     state->hapinestriangle_note_index = 0;
     state->hapinessquare_note_index = 0;
     state->samplervoice_note_index = 0;
     state->samplerfx_note_index = 0;
+
+    // Reset Blooper CC indices
+    for (int i = 0; i < 10; i++) {
+        state->blooper_cc_index[i] = 0;
+    }
 
     printf("[STATE] Note indices reset to 0\n");
 }
@@ -92,10 +97,10 @@ void update_part(frendo_state_t *state, const song_set_t *song_set) {
 }
 
 /**
- * Joue la note CAT suivante de la séquence courante
+ * Joue la note BASS suivante de la séquence courante
  * Canal MIDI out 3 - Déclenché par les notes sur canal in 0
  */
-void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+void play_BASS_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
     if (!midi || !song_set || !state) {
         return;
     }
@@ -116,26 +121,26 @@ void play_CAT_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t 
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *cat_seq = &current_part->CAT.sequence;
+    const note_sequence_t *bass_seq = &current_part->BASS.sequence;
 
     // Vérifier qu'il y a des notes dans la séquence
-    if (cat_seq->count == 0) {
+    if (bass_seq->count == 0) {
         return;
     }
 
     // Obtenir la note courante
-    uint8_t note = cat_seq->notes[state->cat_note_index];
+    uint8_t note = bass_seq->notes[state->bass_note_index];
 
     // Avancer dans la séquence
-    state->cat_note_index++;
+    state->bass_note_index++;
 
     // Revenir au début si on a atteint la fin
-    if (state->cat_note_index >= cat_seq->count) {
-        state->cat_note_index = 0;
+    if (state->bass_note_index >= bass_seq->count) {
+        state->bass_note_index = 0;
     }
 
     // Envoyer la note sur le canal MIDI out 3
-    send_midi_note(midi, 3, note, "CAT", state->cat_note_index, cat_seq->count);
+    send_midi_note(midi, 3, note, "BASS", state->bass_note_index, bass_seq->count);
 }
 
 /**
@@ -371,4 +376,89 @@ void play_SAMPLERFX_note(midi_interface_t *midi, song_set_t *song_set, frendo_st
 
     // Envoyer la note sur le canal MIDI out 8
     send_midi_note(midi, 8, note, "SAMPLERFX", state->samplerfx_note_index, samplerfx_seq->count);
+}
+
+/**
+ * Convertit un nom de CC Blooper en numéro de CC
+ * Retourne -1 si le nom n'est pas reconnu
+ */
+int blooper_cc_name_to_number(const char *cc_name) {
+    if (!cc_name) return -1;
+
+    // Map CC names to CC numbers
+    if (strcmp(cc_name, "record") == 0) return BLOOPER_CC_RECORD;
+    if (strcmp(cc_name, "play") == 0) return BLOOPER_CC_PLAY;
+    if (strcmp(cc_name, "overdub") == 0) return BLOOPER_CC_OVERDUB;
+    if (strcmp(cc_name, "stop") == 0) return BLOOPER_CC_STOP;
+    if (strcmp(cc_name, "undo") == 0) return BLOOPER_CC_UNDO;
+    if (strcmp(cc_name, "redo") == 0) return BLOOPER_CC_REDO;
+    if (strcmp(cc_name, "erase") == 0) return BLOOPER_CC_ERASE;
+    if (strcmp(cc_name, "hold") == 0) return BLOOPER_CC_HOLD;
+    if (strcmp(cc_name, "switchb") == 0) return BLOOPER_CC_SWITCHB;
+    if (strcmp(cc_name, "volume") == 0) return BLOOPER_CC_VOLUME;
+    if (strcmp(cc_name, "layers") == 0) return BLOOPER_CC_LAYERS;
+    if (strcmp(cc_name, "repeats") == 0) return BLOOPER_CC_REPEATS;
+    if (strcmp(cc_name, "moda_val") == 0) return BLOOPER_CC_MODA_VAL;
+    if (strcmp(cc_name, "stability") == 0) return BLOOPER_CC_STABILITY;
+    if (strcmp(cc_name, "modb_val") == 0) return BLOOPER_CC_MODB_VAL;
+    if (strcmp(cc_name, "ramp") == 0) return BLOOPER_CC_RAMP;
+    if (strcmp(cc_name, "moda_mode") == 0) return BLOOPER_CC_MODA_MODE;
+    if (strcmp(cc_name, "loop_mode") == 0) return BLOOPER_CC_LOOP_MODE;
+    if (strcmp(cc_name, "modb_mode") == 0) return BLOOPER_CC_MODB_MODE;
+    if (strcmp(cc_name, "save_mode") == 0) return BLOOPER_CC_SAVE_MODE;
+    if (strcmp(cc_name, "moda") == 0) return BLOOPER_CC_MODA;
+    if (strcmp(cc_name, "modb") == 0) return BLOOPER_CC_MODB;
+    if (strcmp(cc_name, "clock_ign") == 0) return BLOOPER_CC_CLOCK_IGN;
+    if (strcmp(cc_name, "ramp_onof") == 0) return BLOOPER_CC_RAMP_ONOF;
+    if (strcmp(cc_name, "note_div") == 0) return BLOOPER_CC_NOTE_DIV;
+    if (strcmp(cc_name, "expr") == 0) return BLOOPER_CC_EXPR;
+
+    return -1; // Not found
+}
+
+/**
+ * Joue le prochain CC Blooper pour toutes les tracks CC actives
+ */
+void play_BLOOPER_cc(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+    if (!midi || !song_set || !state) {
+        return;
+    }
+
+    // Vérifier indices valides
+    if (state->song_index >= song_set->song_count) {
+        return;
+    }
+
+    const song_t *current_song = &song_set->songs[state->song_index];
+    if (state->part_index >= current_song->part_count) {
+        return;
+    }
+
+    const song_part_t *current_part = &current_song->parts[state->part_index];
+
+    // Parcourir toutes les tracks CC Blooper actives
+    for (int i = 0; i < current_part->blooper_cc_count && i < 10; i++) {
+        const cc_sequence_t *cc_seq = &current_part->BLOOPER_CC[i];
+
+        // Vérifier qu'il y a des valeurs dans la séquence
+        if (cc_seq->count == 0) {
+            continue;
+        }
+
+        // Obtenir la valeur courante
+        uint8_t value = cc_seq->values[state->blooper_cc_index[i]];
+
+        // Avancer dans la séquence
+        state->blooper_cc_index[i]++;
+
+        // Revenir au début si on a atteint la fin
+        if (state->blooper_cc_index[i] >= cc_seq->count) {
+            state->blooper_cc_index[i] = 0;
+        }
+
+        // Envoyer le CC sur le canal MIDI out 9 (Blooper)
+        char cc_name_buffer[64];
+        snprintf(cc_name_buffer, sizeof(cc_name_buffer), "BLOOPER[CC#%d]", cc_seq->cc_number);
+        send_midi_cc(midi, 9, cc_seq->cc_number, value, cc_name_buffer, state->blooper_cc_index[i], cc_seq->count);
+    }
 }
