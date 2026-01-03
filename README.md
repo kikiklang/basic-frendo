@@ -54,14 +54,14 @@ INPUTS
 
 PART
 #   BASS[kick]  MS20[snare]
-00  36          60
-01  38          62
-02  40          64
+01  36          60
+02  38          62
+03  40          64
 ```
 
 ### Syntaxe table
 - `#` : ligne header (colonnes)
-- `00`, `01`... : numéros de row
+- `01`, `02`... : numéros de row
 - Valeur MIDI : `36`, `127`, etc.
 - `-` : skip (pas de note)
 - `^` : répète la valeur du dessus

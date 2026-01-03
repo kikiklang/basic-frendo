@@ -66,7 +66,7 @@ typedef struct {
     int cc_number;            // Si blooper, le CC number
     track_index_t track_idx;  // Index de la track
 
-    table_cell_t cells[100];  // Cellules (rows 00-99)
+    table_cell_t cells[100];  // Cellules (rows 01-100)
     int cell_count;           // Nombre de rows
 } table_column_t;
 
@@ -706,7 +706,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
 
 /**
  * Parse une ligne de données TABLE
- * Format: 00  34  R[60..72]  127  -
+ * Format: 01  34  R[60..72]  127  -
  *
  * @param line La ligne à parser
  * @param table La table à remplir
@@ -719,7 +719,7 @@ static frendo_error_t parse_table_data_line(const char *line, table_data_t *tabl
     // Skip espaces
     while (isspace(*p)) p++;
 
-    // Extraire le numéro de ligne (ex: "00", "01", etc.)
+    // Extraire le numéro de ligne (ex: "01", "02", etc.)
     int row_num = -1;
     if (isdigit(*p)) {
         row_num = 0;
@@ -729,7 +729,7 @@ static frendo_error_t parse_table_data_line(const char *line, table_data_t *tabl
         }
     }
 
-    if (row_num < 0 || row_num >= 100) {
+    if (row_num < 1 || row_num > 100) {
         printf("[ERROR] Invalid row number in TABLE at line %d\n", line_num);
         return FRENDO_ERROR_JSON;
     }
@@ -743,11 +743,11 @@ static frendo_error_t parse_table_data_line(const char *line, table_data_t *tabl
 
         if (!*p) {
             // Fin de ligne = cellule vide pour les colonnes restantes
-            col->cells[row_num].type = CELL_EMPTY;
+            col->cells[row_num - 1].type = CELL_EMPTY;
             continue;
         }
 
-        table_cell_t *cell = &col->cells[row_num];
+        table_cell_t *cell = &col->cells[row_num - 1];
 
         // Parser la cellule
         frendo_error_t err = parse_table_cell(&p, cell, line_num);
@@ -756,8 +756,8 @@ static frendo_error_t parse_table_data_line(const char *line, table_data_t *tabl
 
     // Mettre à jour cell_count si nécessaire
     for (int col_idx = 0; col_idx < table->column_count; col_idx++) {
-        if (row_num + 1 > table->columns[col_idx].cell_count) {
-            table->columns[col_idx].cell_count = row_num + 1;
+        if (row_num > table->columns[col_idx].cell_count) {
+            table->columns[col_idx].cell_count = row_num;
         }
     }
 
