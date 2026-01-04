@@ -90,10 +90,8 @@ typedef struct {
 typedef struct {
     track_t BASS;              // Séquence BASS (canal MIDI out 3)
     track_t MS20;             // Séquence MS20 (canal MIDI out 4)
-    track_t HAPINESTRIANGLE;  // Séquence HAPINESTRIANGLE (canal MIDI out 5)
-    track_t HAPINESSQUARE;    // Séquence HAPINESSQUARE (canal MIDI out 6)
-    track_t SAMPLERVOICE;     // Séquence SAMPLERVOICE (canal MIDI out 7)
-    track_t SAMPLERFX;        // Séquence SAMPLERFX (canal MIDI out 8)
+    track_t SAMPLERVOICE;     // Séquence SAMPLERVOICE (canal MIDI out 5)
+    track_t SAMPLERFX;        // Séquence SAMPLERFX (canal MIDI out 6)
 
     // Blooper CC sequences (up to 10 different CC tracks per part)
     cc_sequence_t BLOOPER_CC[10];  // Array of CC sequences
@@ -120,8 +118,6 @@ typedef struct {
     int part_index;                  // Index de la partie courante
     int bass_note_index;              // Position dans la séquence BASS
     int ms20_note_index;             // Position dans la séquence MS20
-    int hapinestriangle_note_index;  // Position dans la séquence HAPINESTRIANGLE
-    int hapinessquare_note_index;    // Position dans la séquence HAPINESSQUARE
     int samplervoice_note_index;     // Position dans la séquence SAMPLERVOICE
     int samplerfx_note_index;        // Position dans la séquence SAMPLERFX
     int blooper_cc_index[10];        // Position dans les séquences CC Blooper (max 10)
@@ -140,7 +136,6 @@ typedef struct {
 // frendo_parser.c
 frendo_error_t load_frendo_set(const char *directory, song_set_t *song_set);
 int list_available_sets(const char *sets_dir, char set_names[][MAX_NAME_LENGTH], int max_sets);
-void print_song_set_info(const song_set_t *song_set);
 
 // midi_handler.c
 frendo_error_t init_midi_interface(midi_interface_t *midi);
@@ -154,19 +149,26 @@ void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, ui
 void cleanup_midi_interface(midi_interface_t *midi);
 
 // frendo_core.c
+typedef enum {
+    TRACK_BASS,
+    TRACK_MS20,
+    TRACK_SAMPLERVOICE,
+    TRACK_SAMPLERFX
+} track_id_t;
+
 void reset_note_indices(frendo_state_t *state);
 void update_song(frendo_state_t *state, const song_set_t *song_set);
 void update_part(frendo_state_t *state, const song_set_t *song_set);
+void play_track_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state, track_id_t track_id);
 void play_BASS_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
-void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
-void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 void play_SAMPLERVOICE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 void play_SAMPLERFX_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 void play_BLOOPER_cc(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state);
 
 // Helper functions for Blooper CC
 int blooper_cc_name_to_number(const char *cc_name);
+const char* blooper_cc_number_to_name(int cc_number);
 
 // utils.c
 const char* error_to_string(frendo_error_t error);

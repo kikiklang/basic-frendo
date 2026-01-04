@@ -13,7 +13,7 @@ OBJDIR = build
 SETSDIR = sets
 
 # Fichiers sources
-SOURCES = main.c frendo_parser.c midi_handler.c frendo_core.c utils.c
+SOURCES = main.c frendo_parser.c midi_handler.c frendo_core.c utils.c tracker_display.c fort.c
 OBJECTS = $(SOURCES:%.c=$(OBJDIR)/%.o)
 DEPENDS = $(OBJECTS:.o=.d)
 

@@ -10,16 +10,8 @@
 #include <dirent.h>
 #include <sys/stat.h>
 
-// Mapping des noms de tracks vers leurs indices
-typedef enum {
-    TRACK_BASS = 0,
-    TRACK_MS20 = 1,
-    TRACK_HAPINESTRIANGLE = 2,
-    TRACK_HAPINESSQUARE = 3,
-    TRACK_SAMPLERVOICE = 4,
-    TRACK_SAMPLERFX = 5,
-    TRACK_UNKNOWN = -1
-} track_index_t;
+// Note: track_id_t est maintenant défini dans basic_frendo.h
+#define TRACK_UNKNOWN -1
 
 // Mapping inputs nom -> channel
 typedef struct {
@@ -64,7 +56,7 @@ typedef struct {
     char input_name[32];      // "kick", "snare", etc.
     bool is_blooper;          // true si BLOOPER*
     int cc_number;            // Si blooper, le CC number
-    track_index_t track_idx;  // Index de la track
+    track_id_t track_idx;  // Index de la track
 
     table_cell_t cells[100];  // Cellules (rows 01-100)
     int cell_count;           // Nombre de rows
@@ -110,11 +102,9 @@ static int find_input_channel(parser_context_t *ctx, const char *input_name) {
 /**
  * Parse le nom de track et retourne son index
  */
-static track_index_t parse_track_name(const char *name) {
+static track_id_t parse_track_name(const char *name) {
     if (strcmp(name, "BASS") == 0) return TRACK_BASS;
     if (strcmp(name, "MS20") == 0) return TRACK_MS20;
-    if (strcmp(name, "HAPINESTRIANGLE") == 0) return TRACK_HAPINESTRIANGLE;
-    if (strcmp(name, "HAPINESSQUARE") == 0) return TRACK_HAPINESSQUARE;
     if (strcmp(name, "SAMPLERVOICE") == 0) return TRACK_SAMPLERVOICE;
     if (strcmp(name, "SAMPLERFX") == 0) return TRACK_SAMPLERFX;
     return TRACK_UNKNOWN;
@@ -194,7 +184,14 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         return FRENDO_OK;
     }
 
-    // 2. Symbole - (skip)
+    // 2. Symbole . (empty cell - explicitly marks end of sequence)
+    if (**p == '.') {
+        cell->type = CELL_EMPTY;
+        (*p)++;
+        return FRENDO_OK;
+    }
+
+    // 3. Symbole - (skip)
     if (**p == '-') {
         cell->type = CELL_SKIP;
         cell->data.value = 255;
@@ -202,7 +199,7 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         return FRENDO_OK;
     }
 
-    // 3. Random R[start..end]
+    // 4. Random R[start..end]
     if (**p == 'R' && *(*p + 1) == '[') {
         const char *bracket_close = strchr(*p, ']');
         if (!bracket_close) {
@@ -230,7 +227,7 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         return FRENDO_OK;
     }
 
-    // 4. Range [start..end]
+    // 5. Range [start..end]
     if (**p == '[') {
         const char *bracket_close = strchr(*p, ']');
         if (!bracket_close) {
@@ -258,7 +255,7 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         return FRENDO_OK;
     }
 
-    // 5. Valeur numérique directe
+    // 6. Valeur numérique directe
     if (isdigit(**p)) {
         int value = 0;
         while (isdigit(**p)) {
@@ -325,14 +322,6 @@ static frendo_error_t store_column_sequence(table_column_t *col, uint8_t *values
             case TRACK_MS20:
                 seq = &part->MS20.sequence;
                 part->MS20.listen_channel = channel;
-                break;
-            case TRACK_HAPINESTRIANGLE:
-                seq = &part->HAPINESTRIANGLE.sequence;
-                part->HAPINESTRIANGLE.listen_channel = channel;
-                break;
-            case TRACK_HAPINESSQUARE:
-                seq = &part->HAPINESSQUARE.sequence;
-                part->HAPINESSQUARE.listen_channel = channel;
                 break;
             case TRACK_SAMPLERVOICE:
                 seq = &part->SAMPLERVOICE.sequence;
@@ -999,10 +988,9 @@ void print_song_set_info(const song_set_t *song_set) {
 
         for (int j = 0; j < song->part_count; j++) {
             const song_part_t *part = &song->parts[j];
-            printf("  Part %d: BASS[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
+            printf("  Part %d: BASS[%d] MS20[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
                    j + 1,
                    part->BASS.sequence.count, part->MS20.sequence.count,
-                   part->HAPINESTRIANGLE.sequence.count, part->HAPINESSQUARE.sequence.count,
                    part->SAMPLERVOICE.sequence.count, part->SAMPLERFX.sequence.count);
         }
         printf("\n");

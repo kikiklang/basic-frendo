@@ -183,7 +183,7 @@ void process_midi_message(const snd_seq_event_t *event,
         return;
     }
 
-    printf("[MIDI IN]  Channel: %d | Note: %d\n", channel, note);
+    // printf("[MIDI IN]  Channel: %d | Note: %d\n", channel, note);
 
     // Canal 2 note 48/49 = contrôles (changement song/part)
     if (channel == 2) {
@@ -213,12 +213,6 @@ void process_midi_message(const snd_seq_event_t *event,
     if (current_part->MS20.sequence.count > 0 && current_part->MS20.listen_channel == channel) {
         play_MS20_note(midi, song_set, state);
     }
-    if (current_part->HAPINESTRIANGLE.sequence.count > 0 && current_part->HAPINESTRIANGLE.listen_channel == channel) {
-        play_HAPINESTRIANGLE_note(midi, song_set, state);
-    }
-    if (current_part->HAPINESSQUARE.sequence.count > 0 && current_part->HAPINESSQUARE.listen_channel == channel) {
-        play_HAPINESSQUARE_note(midi, song_set, state);
-    }
     if (current_part->SAMPLERVOICE.sequence.count > 0 && current_part->SAMPLERVOICE.listen_channel == channel) {
         play_SAMPLERVOICE_note(midi, song_set, state);
     }
@@ -242,7 +236,7 @@ void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const
 
     // Ignorer les notes à 0 (silence)
     if (note == 0) {
-        printf("[MIDI OUT] %s | Channel: %d | Silent note (skipped)\n", track_name, channel);
+        // printf("[MIDI OUT] %s | Channel: %d | Silent note (skipped)\n", track_name, channel);
         return;
     }
 
@@ -269,8 +263,8 @@ void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const
     // Forcer l'envoi immédiat
     snd_seq_drain_output(midi->seq_handle);
 
-    printf("[MIDI OUT] %s | Channel: %d | Note: %d | Index %d/%d\n",
-           track_name, channel, note, note_index, total_notes);
+    // printf("[MIDI OUT] %s | Channel: %d | Note: %d | Index %d/%d\n",
+    //        track_name, channel, note, note_index, total_notes);
 
     // Attendre un court délai (10ms comme dans la version Node.js)
     usleep(10000); // 10ms = 10000 microsecondes
@@ -298,7 +292,7 @@ void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, ui
 
     // 255 signifie "skip" (ne rien envoyer sur ce step)
     if (value == 255) {
-        printf("[MIDI OUT] %s | Channel: %d | CC#%d | Skip (value 255)\n", cc_name, channel, cc_number);
+        // printf("[MIDI OUT] %s | Channel: %d | CC#%d | Skip (value 255)\n", cc_name, channel, cc_number);
         return;
     }
 
@@ -325,8 +319,8 @@ void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, ui
     // Forcer l'envoi immédiat
     snd_seq_drain_output(midi->seq_handle);
 
-    printf("[MIDI OUT] %s | Channel: %d | CC#%d | Value: %d | Index %d/%d\n",
-           cc_name, channel, cc_number, value, value_index, total_values);
+    // printf("[MIDI OUT] %s | Channel: %d | CC#%d | Value: %d | Index %d/%d\n",
+    //        cc_name, channel, cc_number, value, value_index, total_values);
 }
 
 /**

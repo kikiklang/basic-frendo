@@ -8,6 +8,7 @@
  */
 
 #include "basic_frendo.h"
+#include "tracker_display.h"
 #include <signal.h>
 #include <poll.h>
 #include <unistd.h>
@@ -49,10 +50,16 @@ void midi_loop(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *sta
     }
     
     snd_seq_poll_descriptors(midi->seq_handle, pfds, npfds, POLLIN);
-    
+
     printf("Ready to play! Waiting for MIDI input...\n");
     printf("─────────────────────────────────────────\n");
-    
+
+    // Initialiser l'affichage tracker
+    init_tracker_display();
+
+    // Afficher l'état initial
+    update_tracker_display(song_set, state);
+
     while (g_running) {
         // Attendre des événements MIDI avec timeout de 100ms
         if (poll(pfds, npfds, 100) > 0) {
@@ -63,7 +70,10 @@ void midi_loop(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *sta
                 
                 // Traiter l'événement MIDI
                 process_midi_message(ev, midi, song_set, state);
-                
+
+                // Mettre à jour l'affichage tracker
+                update_tracker_display(song_set, state);
+
                 // Libérer l'événement
                 snd_seq_free_event(ev);
             }
@@ -72,7 +82,10 @@ void midi_loop(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *sta
         // Petite pause pour éviter une utilisation CPU excessive
         usleep(1000); // 1ms
     }
-    
+
+    // Nettoyer l'affichage tracker
+    cleanup_tracker_display();
+
     free(pfds);
     printf("\n[INFO] MIDI loop terminated\n");
 }
@@ -80,7 +93,7 @@ void midi_loop(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *sta
 /**
  * Fonction principale
  */
-int main(int argc, char *argv[]) {
+int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
     frendo_error_t result;
     song_set_t song_set;
     frendo_state_t state = {0}; // Initialiser tout à zéro
@@ -171,8 +184,6 @@ int main(int argc, char *argv[]) {
     state.part_index = 0;
     state.bass_note_index = 0;
     state.ms20_note_index = 0;
-    state.hapinestriangle_note_index = 0;
-    state.hapinessquare_note_index = 0;
     state.samplervoice_note_index = 0;
     state.samplerfx_note_index = 0;
 
@@ -180,11 +191,9 @@ int main(int argc, char *argv[]) {
     printf("       Song: '%s' (1/%d)\n",
            song_set.songs[0].name, song_set.song_count);
     printf("       Part: 1/%d\n", song_set.songs[0].part_count);
-    printf("       BASS[%d] MS20[%d] HAPINESTRIANGLE[%d] HAPINESSQUARE[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
+    printf("       BASS[%d] MS20[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
            song_set.songs[0].parts[0].BASS.sequence.count,
            song_set.songs[0].parts[0].MS20.sequence.count,
-           song_set.songs[0].parts[0].HAPINESTRIANGLE.sequence.count,
-           song_set.songs[0].parts[0].HAPINESSQUARE.sequence.count,
            song_set.songs[0].parts[0].SAMPLERVOICE.sequence.count,
            song_set.songs[0].parts[0].SAMPLERFX.sequence.count);
     

@@ -18,8 +18,6 @@ void reset_note_indices(frendo_state_t *state) {
 
     state->bass_note_index = 0;
     state->ms20_note_index = 0;
-    state->hapinestriangle_note_index = 0;
-    state->hapinessquare_note_index = 0;
     state->samplervoice_note_index = 0;
     state->samplerfx_note_index = 0;
 
@@ -97,10 +95,10 @@ void update_part(frendo_state_t *state, const song_set_t *song_set) {
 }
 
 /**
- * Joue la note BASS suivante de la séquence courante
- * Canal MIDI out 3 - Déclenché par les notes sur canal in 0
+ * Fonction générique pour jouer la note suivante d'une track
+ * Remplace les 6 fonctions play_*_note identiques
  */
-void play_BASS_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+void play_track_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state, track_id_t track_id) {
     if (!midi || !song_set || !state) {
         return;
     }
@@ -121,26 +119,68 @@ void play_BASS_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
     }
 
     const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *bass_seq = &current_part->BASS.sequence;
+
+    // Sélectionner la track, l'index et le canal selon le track_id
+    const note_sequence_t *seq;
+    int *note_index;
+    uint8_t out_channel;
+    const char *track_name;
+
+    switch (track_id) {
+        case TRACK_BASS:
+            seq = &current_part->BASS.sequence;
+            note_index = &state->bass_note_index;
+            out_channel = 3;
+            track_name = "BASS";
+            break;
+        case TRACK_MS20:
+            seq = &current_part->MS20.sequence;
+            note_index = &state->ms20_note_index;
+            out_channel = 4;
+            track_name = "MS20";
+            break;
+        case TRACK_SAMPLERVOICE:
+            seq = &current_part->SAMPLERVOICE.sequence;
+            note_index = &state->samplervoice_note_index;
+            out_channel = 5;
+            track_name = "SAMPLERVOICE";
+            break;
+        case TRACK_SAMPLERFX:
+            seq = &current_part->SAMPLERFX.sequence;
+            note_index = &state->samplerfx_note_index;
+            out_channel = 6;
+            track_name = "SAMPLERFX";
+            break;
+        default:
+            return;
+    }
 
     // Vérifier qu'il y a des notes dans la séquence
-    if (bass_seq->count == 0) {
+    if (seq->count == 0) {
         return;
     }
 
     // Obtenir la note courante
-    uint8_t note = bass_seq->notes[state->bass_note_index];
+    uint8_t note = seq->notes[*note_index];
 
     // Avancer dans la séquence
-    state->bass_note_index++;
+    (*note_index)++;
 
     // Revenir au début si on a atteint la fin
-    if (state->bass_note_index >= bass_seq->count) {
-        state->bass_note_index = 0;
+    if (*note_index >= seq->count) {
+        *note_index = 0;
     }
 
-    // Envoyer la note sur le canal MIDI out 3
-    send_midi_note(midi, 3, note, "BASS", state->bass_note_index, bass_seq->count);
+    // Envoyer la note
+    send_midi_note(midi, out_channel, note, track_name, *note_index, seq->count);
+}
+
+/**
+ * Joue la note BASS suivante de la séquence courante
+ * Canal MIDI out 3 - Déclenché par les notes sur canal in 0
+ */
+void play_BASS_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
+    play_track_note(midi, song_set, state, TRACK_BASS);
 }
 
 /**
@@ -148,235 +188,63 @@ void play_BASS_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t
  * Canal MIDI out 4 - Déclenché par les notes sur canal in 1
  */
 void play_MS20_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
-    if (!midi || !song_set || !state) {
-        return;
-    }
-
-    // Vérifier la validité des indices
-    if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n",
-               state->song_index, song_set->song_count - 1);
-        return;
-    }
-
-    const song_t *current_song = &song_set->songs[state->song_index];
-
-    if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n",
-               state->part_index, current_song->part_count - 1);
-        return;
-    }
-
-    const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *ms20_seq = &current_part->MS20.sequence;
-
-    // Vérifier qu'il y a des notes dans la séquence
-    if (ms20_seq->count == 0) {
-        return;
-    }
-
-    // Obtenir la note courante
-    uint8_t note = ms20_seq->notes[state->ms20_note_index];
-
-    // Avancer dans la séquence
-    state->ms20_note_index++;
-
-    // Revenir au début si on a atteint la fin
-    if (state->ms20_note_index >= ms20_seq->count) {
-        state->ms20_note_index = 0;
-    }
-
-    // Envoyer la note sur le canal MIDI out 4
-    send_midi_note(midi, 4, note, "MS20", state->ms20_note_index, ms20_seq->count);
-}
-
-/**
- * Joue la note HAPINESTRIANGLE suivante de la séquence courante
- * Canal MIDI out 5 - Déclenché par les notes sur canal in 1
- */
-void play_HAPINESTRIANGLE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
-    if (!midi || !song_set || !state) {
-        return;
-    }
-
-    // Vérifier la validité des indices
-    if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n",
-               state->song_index, song_set->song_count - 1);
-        return;
-    }
-
-    const song_t *current_song = &song_set->songs[state->song_index];
-
-    if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n",
-               state->part_index, current_song->part_count - 1);
-        return;
-    }
-
-    const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *hapinestriangle_seq = &current_part->HAPINESTRIANGLE.sequence;
-
-    // Vérifier qu'il y a des notes dans la séquence
-    if (hapinestriangle_seq->count == 0) {
-        return;
-    }
-
-    // Obtenir la note courante
-    uint8_t note = hapinestriangle_seq->notes[state->hapinestriangle_note_index];
-
-    // Avancer dans la séquence
-    state->hapinestriangle_note_index++;
-
-    // Revenir au début si on a atteint la fin
-    if (state->hapinestriangle_note_index >= hapinestriangle_seq->count) {
-        state->hapinestriangle_note_index = 0;
-    }
-
-    // Envoyer la note sur le canal MIDI out 5
-    send_midi_note(midi, 5, note, "HAPINESTRIANGLE", state->hapinestriangle_note_index, hapinestriangle_seq->count);
-}
-
-/**
- * Joue la note HAPINESSQUARE suivante de la séquence courante
- * Canal MIDI out 6 - Déclenché par les notes sur canal in 0
- */
-void play_HAPINESSQUARE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
-    if (!midi || !song_set || !state) {
-        return;
-    }
-
-    // Vérifier la validité des indices
-    if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n",
-               state->song_index, song_set->song_count - 1);
-        return;
-    }
-
-    const song_t *current_song = &song_set->songs[state->song_index];
-
-    if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n",
-               state->part_index, current_song->part_count - 1);
-        return;
-    }
-
-    const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *hapinessquare_seq = &current_part->HAPINESSQUARE.sequence;
-
-    // Vérifier qu'il y a des notes dans la séquence
-    if (hapinessquare_seq->count == 0) {
-        return;
-    }
-
-    // Obtenir la note courante
-    uint8_t note = hapinessquare_seq->notes[state->hapinessquare_note_index];
-
-    // Avancer dans la séquence
-    state->hapinessquare_note_index++;
-
-    // Revenir au début si on a atteint la fin
-    if (state->hapinessquare_note_index >= hapinessquare_seq->count) {
-        state->hapinessquare_note_index = 0;
-    }
-
-    // Envoyer la note sur le canal MIDI out 6
-    send_midi_note(midi, 6, note, "HAPINESSQUARE", state->hapinessquare_note_index, hapinessquare_seq->count);
+    play_track_note(midi, song_set, state, TRACK_MS20);
 }
 
 /**
  * Joue la note SAMPLERVOICE suivante de la séquence courante
- * Canal MIDI out 7 - Déclenché par les notes sur canal in 1
+ * Canal MIDI out 5 - Déclenché par les notes sur canal in 2
  */
 void play_SAMPLERVOICE_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
-    if (!midi || !song_set || !state) {
-        return;
-    }
-
-    // Vérifier la validité des indices
-    if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n",
-               state->song_index, song_set->song_count - 1);
-        return;
-    }
-
-    const song_t *current_song = &song_set->songs[state->song_index];
-
-    if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n",
-               state->part_index, current_song->part_count - 1);
-        return;
-    }
-
-    const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *samplervoice_seq = &current_part->SAMPLERVOICE.sequence;
-
-    // Vérifier qu'il y a des notes dans la séquence
-    if (samplervoice_seq->count == 0) {
-        return;
-    }
-
-    // Obtenir la note courante
-    uint8_t note = samplervoice_seq->notes[state->samplervoice_note_index];
-
-    // Avancer dans la séquence
-    state->samplervoice_note_index++;
-
-    // Revenir au début si on a atteint la fin
-    if (state->samplervoice_note_index >= samplervoice_seq->count) {
-        state->samplervoice_note_index = 0;
-    }
-
-    // Envoyer la note sur le canal MIDI out 7
-    send_midi_note(midi, 7, note, "SAMPLERVOICE", state->samplervoice_note_index, samplervoice_seq->count);
+    play_track_note(midi, song_set, state, TRACK_SAMPLERVOICE);
 }
 
 /**
  * Joue la note SAMPLERFX suivante de la séquence courante
- * Canal MIDI out 8 - Déclenché par les notes sur canal in 0
+ * Canal MIDI out 6 - Déclenché par les notes sur canal in 3
  */
 void play_SAMPLERFX_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *state) {
-    if (!midi || !song_set || !state) {
-        return;
-    }
-
-    // Vérifier la validité des indices
-    if (state->song_index >= song_set->song_count) {
-        printf("[ERROR] Invalid song index: %d (max: %d)\n",
-               state->song_index, song_set->song_count - 1);
-        return;
-    }
-
-    const song_t *current_song = &song_set->songs[state->song_index];
-
-    if (state->part_index >= current_song->part_count) {
-        printf("[ERROR] Invalid part index: %d (max: %d)\n",
-               state->part_index, current_song->part_count - 1);
-        return;
-    }
-
-    const song_part_t *current_part = &current_song->parts[state->part_index];
-    const note_sequence_t *samplerfx_seq = &current_part->SAMPLERFX.sequence;
-
-    // Vérifier qu'il y a des notes dans la séquence
-    if (samplerfx_seq->count == 0) {
-        return;
-    }
-
-    // Obtenir la note courante
-    uint8_t note = samplerfx_seq->notes[state->samplerfx_note_index];
-
-    // Avancer dans la séquence
-    state->samplerfx_note_index++;
-
-    // Revenir au début si on a atteint la fin
-    if (state->samplerfx_note_index >= samplerfx_seq->count) {
-        state->samplerfx_note_index = 0;
-    }
-
-    // Envoyer la note sur le canal MIDI out 8
-    send_midi_note(midi, 8, note, "SAMPLERFX", state->samplerfx_note_index, samplerfx_seq->count);
+    play_track_note(midi, song_set, state, TRACK_SAMPLERFX);
 }
+
+/**
+ * Table de mapping unique pour les CC Blooper
+ * Élimine la duplication entre name_to_number et number_to_name
+ */
+typedef struct {
+    const char *lowercase_name;  // Nom en minuscule pour le parsing
+    int cc_number;               // Numéro du CC MIDI
+} blooper_cc_mapping_t;
+
+static const blooper_cc_mapping_t BLOOPER_CC_MAP[] = {
+    {"record", BLOOPER_CC_RECORD},
+    {"play", BLOOPER_CC_PLAY},
+    {"overdub", BLOOPER_CC_OVERDUB},
+    {"stop", BLOOPER_CC_STOP},
+    {"undo", BLOOPER_CC_UNDO},
+    {"redo", BLOOPER_CC_REDO},
+    {"erase", BLOOPER_CC_ERASE},
+    {"hold", BLOOPER_CC_HOLD},
+    {"switchb", BLOOPER_CC_SWITCHB},
+    {"volume", BLOOPER_CC_VOLUME},
+    {"layers", BLOOPER_CC_LAYERS},
+    {"repeats", BLOOPER_CC_REPEATS},
+    {"moda_val", BLOOPER_CC_MODA_VAL},
+    {"stability", BLOOPER_CC_STABILITY},
+    {"modb_val", BLOOPER_CC_MODB_VAL},
+    {"ramp", BLOOPER_CC_RAMP},
+    {"moda_mode", BLOOPER_CC_MODA_MODE},
+    {"loop_mode", BLOOPER_CC_LOOP_MODE},
+    {"modb_mode", BLOOPER_CC_MODB_MODE},
+    {"save_mode", BLOOPER_CC_SAVE_MODE},
+    {"moda", BLOOPER_CC_MODA},
+    {"modb", BLOOPER_CC_MODB},
+    {"clock_ign", BLOOPER_CC_CLOCK_IGN},
+    {"ramp_onof", BLOOPER_CC_RAMP_ONOF},
+    {"note_div", BLOOPER_CC_NOTE_DIV},
+    {"expr", BLOOPER_CC_EXPR},
+    {NULL, -1}  // Sentinel
+};
 
 /**
  * Convertit un nom de CC Blooper en numéro de CC
@@ -385,35 +253,47 @@ void play_SAMPLERFX_note(midi_interface_t *midi, song_set_t *song_set, frendo_st
 int blooper_cc_name_to_number(const char *cc_name) {
     if (!cc_name) return -1;
 
-    // Map CC names to CC numbers
-    if (strcmp(cc_name, "record") == 0) return BLOOPER_CC_RECORD;
-    if (strcmp(cc_name, "play") == 0) return BLOOPER_CC_PLAY;
-    if (strcmp(cc_name, "overdub") == 0) return BLOOPER_CC_OVERDUB;
-    if (strcmp(cc_name, "stop") == 0) return BLOOPER_CC_STOP;
-    if (strcmp(cc_name, "undo") == 0) return BLOOPER_CC_UNDO;
-    if (strcmp(cc_name, "redo") == 0) return BLOOPER_CC_REDO;
-    if (strcmp(cc_name, "erase") == 0) return BLOOPER_CC_ERASE;
-    if (strcmp(cc_name, "hold") == 0) return BLOOPER_CC_HOLD;
-    if (strcmp(cc_name, "switchb") == 0) return BLOOPER_CC_SWITCHB;
-    if (strcmp(cc_name, "volume") == 0) return BLOOPER_CC_VOLUME;
-    if (strcmp(cc_name, "layers") == 0) return BLOOPER_CC_LAYERS;
-    if (strcmp(cc_name, "repeats") == 0) return BLOOPER_CC_REPEATS;
-    if (strcmp(cc_name, "moda_val") == 0) return BLOOPER_CC_MODA_VAL;
-    if (strcmp(cc_name, "stability") == 0) return BLOOPER_CC_STABILITY;
-    if (strcmp(cc_name, "modb_val") == 0) return BLOOPER_CC_MODB_VAL;
-    if (strcmp(cc_name, "ramp") == 0) return BLOOPER_CC_RAMP;
-    if (strcmp(cc_name, "moda_mode") == 0) return BLOOPER_CC_MODA_MODE;
-    if (strcmp(cc_name, "loop_mode") == 0) return BLOOPER_CC_LOOP_MODE;
-    if (strcmp(cc_name, "modb_mode") == 0) return BLOOPER_CC_MODB_MODE;
-    if (strcmp(cc_name, "save_mode") == 0) return BLOOPER_CC_SAVE_MODE;
-    if (strcmp(cc_name, "moda") == 0) return BLOOPER_CC_MODA;
-    if (strcmp(cc_name, "modb") == 0) return BLOOPER_CC_MODB;
-    if (strcmp(cc_name, "clock_ign") == 0) return BLOOPER_CC_CLOCK_IGN;
-    if (strcmp(cc_name, "ramp_onof") == 0) return BLOOPER_CC_RAMP_ONOF;
-    if (strcmp(cc_name, "note_div") == 0) return BLOOPER_CC_NOTE_DIV;
-    if (strcmp(cc_name, "expr") == 0) return BLOOPER_CC_EXPR;
+    for (int i = 0; BLOOPER_CC_MAP[i].lowercase_name != NULL; i++) {
+        if (strcmp(cc_name, BLOOPER_CC_MAP[i].lowercase_name) == 0) {
+            return BLOOPER_CC_MAP[i].cc_number;
+        }
+    }
 
     return -1; // Not found
+}
+
+/**
+ * Convertit un numéro de CC Blooper en nom d'affichage (BLOOPER + nom en majuscules)
+ * Retourne "UNKNOWN" si le numéro n'est pas reconnu
+ */
+const char* blooper_cc_number_to_name(int cc_number) {
+    static char display_names[26][32];  // Cache statique pour éviter allocations répétées
+    static int initialized = 0;
+
+    // Initialiser le cache une seule fois
+    if (!initialized) {
+        for (int i = 0; BLOOPER_CC_MAP[i].lowercase_name != NULL; i++) {
+            const char *name = BLOOPER_CC_MAP[i].lowercase_name;
+            snprintf(display_names[i], sizeof(display_names[i]), "BLOOPER%s", name);
+
+            // Convertir en majuscules
+            for (char *p = display_names[i] + 7; *p; p++) {  // +7 pour sauter "BLOOPER"
+                if (*p >= 'a' && *p <= 'z') {
+                    *p = *p - 'a' + 'A';
+                }
+            }
+        }
+        initialized = 1;
+    }
+
+    // Chercher le CC number dans la table
+    for (int i = 0; BLOOPER_CC_MAP[i].lowercase_name != NULL; i++) {
+        if (BLOOPER_CC_MAP[i].cc_number == cc_number) {
+            return display_names[i];
+        }
+    }
+
+    return "UNKNOWN";
 }
 
 /**
