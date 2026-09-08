@@ -13,6 +13,12 @@
 // Note: track_id_t est maintenant défini dans basic_frendo.h
 #define TRACK_UNKNOWN -1
 
+typedef enum {
+    SECTION_NONE,
+    SECTION_INPUTS,
+    SECTION_PART
+} parser_section_t;
+
 // Mapping inputs nom -> channel
 typedef struct {
     char name[32];
@@ -121,17 +127,17 @@ static frendo_error_t parse_input_line(const char *line, parser_context_t *ctx, 
     if (sscanf(line, "%31s = channel:%d", input_name, &channel) != 2) {
         printf("[ERROR] Invalid INPUT format at line %d: %s\n", line_num, line);
         printf("[HELP] Expected format: name = channel:N\n");
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
 
     if (channel < 0 || channel > 15) {
         printf("[ERROR] Invalid MIDI channel %d at line %d (must be 0-15)\n", channel, line_num);
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
 
     if (ctx->input_count >= 16) {
         printf("[ERROR] Too many inputs (max 16) at line %d\n", line_num);
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
 
     strncpy(ctx->inputs[ctx->input_count].name, input_name, sizeof(ctx->inputs[0].name) - 1);
@@ -204,19 +210,19 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         const char *bracket_close = strchr(*p, ']');
         if (!bracket_close) {
             printf("[ERROR] Missing ']' in random range at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         int start, end;
         if (sscanf(*p, "R[%d..%d]", &start, &end) != 2) {
             printf("[ERROR] Invalid random range syntax at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         if (start < 0 || start > 127 || end < 0 || end > 127) {
             printf("[ERROR] Invalid MIDI range R[%d..%d] at line %d (must be 0-127)\n",
                    start, end, line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         cell->type = CELL_RANDOM;
@@ -232,19 +238,19 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         const char *bracket_close = strchr(*p, ']');
         if (!bracket_close) {
             printf("[ERROR] Missing ']' in range at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         int start, end;
         if (sscanf(*p, "[%d..%d]", &start, &end) != 2) {
             printf("[ERROR] Invalid range syntax at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         if (start < 0 || start > 127 || end < 0 || end > 127) {
             printf("[ERROR] Invalid MIDI range [%d..%d] at line %d (must be 0-127)\n",
                    start, end, line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         cell->type = CELL_RANGE;
@@ -266,7 +272,7 @@ static frendo_error_t parse_table_cell(const char **p, table_cell_t *cell, int l
         if (value > 127) {
             printf("[ERROR] Invalid MIDI value %d at line %d (must be 0-127)\n",
                    value, line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         cell->type = CELL_VALUE;
@@ -296,7 +302,7 @@ static frendo_error_t store_column_sequence(table_column_t *col, uint8_t *values
         // Stocker dans Blooper CC
         if (part->blooper_cc_count >= 10) {
             printf("[ERROR] Too many Blooper CC tracks (max 10) at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         cc_sequence_t *cc_seq = &part->BLOOPER_CC[part->blooper_cc_count];
@@ -333,7 +339,7 @@ static frendo_error_t store_column_sequence(table_column_t *col, uint8_t *values
                 break;
             default:
                 printf("[ERROR] Unknown track index at line %d\n", line_num);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
         }
 
         memcpy(seq->notes, values, count);
@@ -368,7 +374,7 @@ static frendo_error_t resolve_caret(table_column_t *col, int current_row,
 
     if (source_row < 0) {
         printf("[ERROR] Cannot resolve ^ at row %d: no source value above\n", current_row);
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
 
     *source_cell = &col->cells[source_row];
@@ -378,7 +384,7 @@ static frendo_error_t resolve_caret(table_column_t *col, int current_row,
             // ^ sur valeur directe = répéter la valeur
             if (*expanded_count >= MAX_NOTES_PER_SEQ) {
                 printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
             expanded[(*expanded_count)++] = (*source_cell)->data.value;
             break;
@@ -387,7 +393,7 @@ static frendo_error_t resolve_caret(table_column_t *col, int current_row,
             // ^ sur skip = répéter skip
             if (*expanded_count >= MAX_NOTES_PER_SEQ) {
                 printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
             expanded[(*expanded_count)++] = 255;
             break;
@@ -397,7 +403,7 @@ static frendo_error_t resolve_caret(table_column_t *col, int current_row,
             // ^ sur range/random = prendre la prochaine valeur du buffer
             if (*range_buffer_count == 0) {
                 printf("[ERROR] Range/Random not initialized for ^ at row %d\n", current_row);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
 
             // Si range_idx >= range_buffer_count, boucler
@@ -407,7 +413,7 @@ static frendo_error_t resolve_caret(table_column_t *col, int current_row,
 
             if (*expanded_count >= MAX_NOTES_PER_SEQ) {
                 printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
             expanded[(*expanded_count)++] = range_buffer[*range_idx];
             (*range_idx)++;
@@ -415,20 +421,29 @@ static frendo_error_t resolve_caret(table_column_t *col, int current_row,
 
         default:
             printf("[ERROR] Cannot resolve ^ at row %d: invalid source type\n", current_row);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
     }
 
     return FRENDO_OK;
 }
 
 /**
+ * Remplit range_buffer avec la séquence [start..end], shufflée si random
+ */
+static int fill_range_buffer(uint8_t *buf, int start, int end, bool randomize) {
+    int step = (start <= end) ? 1 : -1;
+    int count = 0;
+    for (int n = start; (step > 0 ? n <= end : n >= end) && count < 128; n += step) {
+        buf[count++] = (uint8_t)n;
+    }
+    if (randomize) {
+        shuffle_notes(buf, count);
+    }
+    return count;
+}
+
+/**
  * Expande une table complète en séquences et stocke dans song_part_t
- *
- * @param table La table à expander
- * @param part Le part à remplir
- * @param ctx Le contexte du parser
- * @param line_num Numéro de ligne (pour erreurs)
- * @return FRENDO_OK ou code d'erreur
  */
 static frendo_error_t expand_table_to_sequences(table_data_t *table, song_part_t *part,
                                                 parser_context_t *ctx, int line_num) {
@@ -454,7 +469,7 @@ static frendo_error_t expand_table_to_sequences(table_data_t *table, song_part_t
                     // Valeur directe
                     if (expanded_count >= MAX_NOTES_PER_SEQ) {
                         printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                        return FRENDO_ERROR_JSON;
+                        return FRENDO_ERROR_PARSE;
                     }
                     expanded[expanded_count++] = cell->data.value;
                     break;
@@ -463,64 +478,23 @@ static frendo_error_t expand_table_to_sequences(table_data_t *table, song_part_t
                     // Skip (255)
                     if (expanded_count >= MAX_NOTES_PER_SEQ) {
                         printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                        return FRENDO_ERROR_JSON;
+                        return FRENDO_ERROR_PARSE;
                     }
                     expanded[expanded_count++] = 255;
                     break;
 
                 case CELL_RANGE:
-                    // Expander le range et prendre la première valeur
-                    range_buffer_count = 0;
-                    range_idx = 0;
-
-                    {
-                        int start = cell->data.range.start;
-                        int end = cell->data.range.end;
-                        int step = (start <= end) ? 1 : -1;
-
-                        for (int note = start;
-                             (step > 0 && note <= end) || (step < 0 && note >= end);
-                             note += step) {
-                            if (range_buffer_count >= 128) break;
-                            range_buffer[range_buffer_count++] = (uint8_t)note;
-                        }
-                    }
-
-                    // Prendre la première valeur
-                    if (expanded_count >= MAX_NOTES_PER_SEQ) {
-                        printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                        return FRENDO_ERROR_JSON;
-                    }
-                    if (range_buffer_count > 0) {
-                        expanded[expanded_count++] = range_buffer[range_idx++];
-                    }
-                    break;
-
                 case CELL_RANDOM:
-                    // Expander le random et prendre la première valeur
-                    range_buffer_count = 0;
                     range_idx = 0;
-
-                    {
-                        int start = cell->data.range.start;
-                        int end = cell->data.range.end;
-                        int range_start = (start <= end) ? start : end;
-                        int range_end = (start <= end) ? end : start;
-
-                        // Générer la séquence
-                        for (int note = range_start; note <= range_end; note++) {
-                            if (range_buffer_count >= 128) break;
-                            range_buffer[range_buffer_count++] = (uint8_t)note;
-                        }
-
-                        // Randomiser
-                        shuffle_notes(range_buffer, range_buffer_count);
-                    }
-
-                    // Prendre la première valeur
+                    range_buffer_count = fill_range_buffer(
+                        range_buffer,
+                        cell->data.range.start,
+                        cell->data.range.end,
+                        cell->type == CELL_RANDOM
+                    );
                     if (expanded_count >= MAX_NOTES_PER_SEQ) {
                         printf("[ERROR] Too many values in TABLE column '%s'\n", col->track_name);
-                        return FRENDO_ERROR_JSON;
+                        return FRENDO_ERROR_PARSE;
                     }
                     if (range_buffer_count > 0) {
                         expanded[expanded_count++] = range_buffer[range_idx++];
@@ -579,7 +553,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
     // Vérifier que la ligne commence par '#'
     if (*p != '#') {
         printf("[ERROR] TABLE header must start with '#' at line %d\n", line_num);
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
     p++;  // Skip '#'
 
@@ -607,7 +581,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
         size_t track_len = bracket_open - p;
         if (track_len >= sizeof(col->track_name)) {
             printf("[ERROR] Track name too long in TABLE header at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
         strncpy(col->track_name, p, track_len);
         col->track_name[track_len] = '\0';
@@ -622,13 +596,13 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
         const char *bracket_close = strchr(bracket_open, ']');
         if (!bracket_close) {
             printf("[ERROR] Missing ']' in TABLE header at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         size_t input_len = bracket_close - bracket_open - 1;
         if (input_len >= sizeof(col->input_name)) {
             printf("[ERROR] Input name too long in TABLE header at line %d\n", line_num);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
         strncpy(col->input_name, bracket_open + 1, input_len);
         col->input_name[input_len] = '\0';
@@ -657,7 +631,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
             if (col->cc_number < 0) {
                 printf("[ERROR] Unknown Blooper CC '%s' in TABLE header at line %d\n",
                        cc_name_lower, line_num);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
         } else {
             col->is_blooper = false;
@@ -665,7 +639,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
             if (col->track_idx == TRACK_UNKNOWN) {
                 printf("[ERROR] Unknown track '%s' in TABLE header at line %d\n",
                        col->track_name, line_num);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
         }
 
@@ -676,7 +650,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
                    col->input_name, line_num);
             printf("[HELP] Make sure '%s' is declared in INPUTS section\n",
                    col->input_name);
-            return FRENDO_ERROR_JSON;
+            return FRENDO_ERROR_PARSE;
         }
 
         table->column_count++;
@@ -687,7 +661,7 @@ static frendo_error_t parse_table_header_line(const char *line, table_data_t *ta
 
     if (table->column_count == 0) {
         printf("[ERROR] No columns found in TABLE header at line %d\n", line_num);
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
 
     return FRENDO_OK;
@@ -720,7 +694,7 @@ static frendo_error_t parse_table_data_line(const char *line, table_data_t *tabl
 
     if (row_num < 1 || row_num > 100) {
         printf("[ERROR] Invalid row number in TABLE at line %d\n", line_num);
-        return FRENDO_ERROR_JSON;
+        return FRENDO_ERROR_PARSE;
     }
 
     // Parser chaque colonne
@@ -772,9 +746,7 @@ frendo_error_t load_frendo_file(const char *filename, song_t *song, const char *
 
     char line[4096];
     int line_num = 0;
-    int in_inputs = 0;
-    int in_part = 0;
-    int in_table = 0;
+    parser_section_t section = SECTION_NONE;
     bool table_header_parsed = false;
     song_part_t *current_part = NULL;
     table_data_t current_table = {0};
@@ -789,15 +761,14 @@ frendo_error_t load_frendo_file(const char *filename, song_t *song, const char *
 
         // Détecter section INPUTS
         if (strcmp(trimmed, "INPUTS") == 0) {
-            in_inputs = 1;
-            in_part = 0;
+            section = SECTION_INPUTS;
             continue;
         }
 
-        // Détecter section PART (détection automatique du format)
+        // Détecter section PART
         if (strcmp(trimmed, "PART") == 0) {
-            // Si on était en mode TABLE, finaliser la table précédente
-            if (in_table && table_header_parsed && current_part) {
+            // Finaliser la table du PART précédent si besoin
+            if (section == SECTION_PART && table_header_parsed && current_part) {
                 frendo_error_t result = expand_table_to_sequences(&current_table, current_part, &ctx, line_num);
                 if (result != FRENDO_OK) {
                     fclose(file);
@@ -805,46 +776,35 @@ frendo_error_t load_frendo_file(const char *filename, song_t *song, const char *
                 }
             }
 
-            in_inputs = 0;
-            in_part = 1;
-            in_table = 0;  // Sera activé au premier header
-
             if (song->part_count >= MAX_PARTS_PER_SONG) {
                 printf("[ERROR] Too many PART sections at line %d (max %d)\n", line_num, MAX_PARTS_PER_SONG);
                 fclose(file);
-                return FRENDO_ERROR_JSON;
+                return FRENDO_ERROR_PARSE;
             }
 
             current_part = &song->parts[song->part_count];
             memset(current_part, 0, sizeof(song_part_t));
             song->part_count++;
 
-            // Initialiser table
             memset(&current_table, 0, sizeof(table_data_t));
             table_header_parsed = false;
-
+            section = SECTION_PART;
             continue;
         }
 
         // Parser contenu selon section
-        if (in_inputs) {
+        if (section == SECTION_INPUTS) {
             frendo_error_t result = parse_input_line(trimmed, &ctx, line_num);
             if (result != FRENDO_OK) {
                 fclose(file);
                 return result;
             }
-        } else if (in_part && current_part) {
-            // Mode PART - format table uniquement
-
-            // Si on voit un '#' avec '[', c'est un header de table
+        } else if (section == SECTION_PART && current_part) {
             if (trimmed[0] == '#' && strchr(trimmed, '[') != NULL) {
-                // Activer mode table et parser le header
-                in_table = 1;
-
                 if (table_header_parsed) {
                     printf("[ERROR] Multiple headers in TABLE at line %d\n", line_num);
                     fclose(file);
-                    return FRENDO_ERROR_JSON;
+                    return FRENDO_ERROR_PARSE;
                 }
 
                 frendo_error_t result = parse_table_header_line(trimmed, &current_table, &ctx, line_num);
@@ -852,16 +812,12 @@ frendo_error_t load_frendo_file(const char *filename, song_t *song, const char *
                     fclose(file);
                     return result;
                 }
-
                 table_header_parsed = true;
-            }
-            // Si on voit un chiffre, c'est une ligne de données
-            else if (isdigit(trimmed[0])) {
-                // Ligne de données
+            } else if (isdigit(trimmed[0])) {
                 if (!table_header_parsed) {
                     printf("[ERROR] TABLE data before header at line %d\n", line_num);
                     fclose(file);
-                    return FRENDO_ERROR_JSON;
+                    return FRENDO_ERROR_PARSE;
                 }
 
                 frendo_error_t result = parse_table_data_line(trimmed, &current_table, line_num);
@@ -870,12 +826,11 @@ frendo_error_t load_frendo_file(const char *filename, song_t *song, const char *
                     return result;
                 }
             }
-            // Sinon, ligne vide ou invalide - ignorer
         }
     }
 
-    // Finaliser la table si on est encore en mode TABLE
-    if (in_table && table_header_parsed && current_part) {
+    // Finaliser la table du dernier PART
+    if (section == SECTION_PART && table_header_parsed && current_part) {
         frendo_error_t result = expand_table_to_sequences(&current_table, current_part, &ctx, line_num);
         if (result != FRENDO_OK) {
             fclose(file);
@@ -887,8 +842,12 @@ frendo_error_t load_frendo_file(const char *filename, song_t *song, const char *
     return FRENDO_OK;
 }
 
+static int compare_strings(const void *a, const void *b) {
+    return strcmp(*(const char **)a, *(const char **)b);
+}
+
 /**
- * Charge tous les fichiers .frendo d'un répertoire
+ * Charge tous les fichiers .frendo d'un répertoire (ordre alphabétique)
  */
 frendo_error_t load_frendo_set(const char *directory, song_set_t *song_set) {
     memset(song_set, 0, sizeof(song_set_t));
@@ -899,38 +858,47 @@ frendo_error_t load_frendo_set(const char *directory, song_set_t *song_set) {
         return FRENDO_ERROR_FILE;
     }
 
+    // Collecter tous les noms de fichiers .frendo
+    char filenames[MAX_SONGS][MAX_FILENAME_LENGTH];
+    int file_count = 0;
+
     struct dirent *entry;
-    while ((entry = readdir(dir)) != NULL && song_set->song_count < MAX_SONGS) {
-        // Vérifier extension .frendo
+    while ((entry = readdir(dir)) != NULL && file_count < MAX_SONGS) {
         size_t name_len = strlen(entry->d_name);
         if (name_len < 8 || strcmp(entry->d_name + name_len - 7, ".frendo") != 0) {
             continue;
         }
-
-        // Construire le chemin complet
-        char filepath[MAX_FILENAME_LENGTH];
-        snprintf(filepath, sizeof(filepath), "%s/%s", directory, entry->d_name);
-
-        // Extraire le nom de la chanson (sans extension)
-        char song_name[MAX_NAME_LENGTH];
-        strncpy(song_name, entry->d_name, name_len - 7);
-        song_name[name_len - 7] = '\0';
-
-        // Charger le fichier
-        frendo_error_t result = load_frendo_file(filepath, &song_set->songs[song_set->song_count], song_name);
-        if (result != FRENDO_OK) {
-            closedir(dir);
-            return result;
-        }
-
-        song_set->song_count++;
+        strncpy(filenames[file_count], entry->d_name, MAX_FILENAME_LENGTH - 1);
+        filenames[file_count][MAX_FILENAME_LENGTH - 1] = '\0';
+        file_count++;
     }
-
     closedir(dir);
 
-    if (song_set->song_count == 0) {
+    if (file_count == 0) {
         printf("[ERROR] No .frendo files found in %s\n", directory);
         return FRENDO_ERROR_FILE;
+    }
+
+    // Trier alphabétiquement pour un ordre déterministe
+    const char *ptrs[MAX_SONGS];
+    for (int i = 0; i < file_count; i++) ptrs[i] = filenames[i];
+    qsort(ptrs, file_count, sizeof(char *), compare_strings);
+
+    // Charger dans l'ordre trié
+    for (int i = 0; i < file_count; i++) {
+        size_t name_len = strlen(ptrs[i]);
+
+        char filepath[MAX_FILENAME_LENGTH];
+        snprintf(filepath, sizeof(filepath), "%s/%s", directory, ptrs[i]);
+
+        char song_name[MAX_NAME_LENGTH];
+        strncpy(song_name, ptrs[i], name_len - 7);
+        song_name[name_len - 7] = '\0';
+
+        frendo_error_t result = load_frendo_file(filepath, &song_set->songs[song_set->song_count], song_name);
+        if (result != FRENDO_OK) return result;
+
+        song_set->song_count++;
     }
 
     return FRENDO_OK;
@@ -971,30 +939,3 @@ int list_available_sets(const char *sets_dir, char set_names[][MAX_NAME_LENGTH],
     return count;
 }
 
-/**
- * Affiche les informations d'un set de chansons (pour debug)
- */
-void print_song_set_info(const song_set_t *song_set) {
-    if (!song_set) return;
-
-    printf("\n═══════════════════════════════════════\n");
-    printf("  SONG SET INFORMATION\n");
-    printf("═══════════════════════════════════════\n");
-    printf("Total songs: %d\n\n", song_set->song_count);
-
-    for (int i = 0; i < song_set->song_count; i++) {
-        const song_t *song = &song_set->songs[i];
-        printf("Song %d: %s (%d parts)\n", i + 1, song->name, song->part_count);
-
-        for (int j = 0; j < song->part_count; j++) {
-            const song_part_t *part = &song->parts[j];
-            printf("  Part %d: BASS[%d] MS20[%d] SAMPLERVOICE[%d] SAMPLERFX[%d]\n",
-                   j + 1,
-                   part->BASS.sequence.count, part->MS20.sequence.count,
-                   part->SAMPLERVOICE.sequence.count, part->SAMPLERFX.sequence.count);
-        }
-        printf("\n");
-    }
-
-    printf("─────────────────────────────────────────\n");
-}

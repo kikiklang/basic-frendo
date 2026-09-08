@@ -14,11 +14,23 @@
 #include <unistd.h>
 #include <alsa/asoundlib.h>
 
-// Constantes MIDI
-#define MIDI_STATUS_NOTE_ON     0x90
-#define MIDI_STATUS_NOTE_OFF    0x80
+// Constantes MIDI — status bytes
+#define MIDI_STATUS_NOTE_ON        0x90
+#define MIDI_STATUS_NOTE_OFF       0x80
 #define MIDI_STATUS_CONTROL_CHANGE 0xB0
-#define MIDI_VELOCITY           127
+#define MIDI_VELOCITY              127
+
+// Canaux MIDI de sortie
+#define MIDI_OUT_BASS         3
+#define MIDI_OUT_MS20         4
+#define MIDI_OUT_SAMPLERVOICE 5
+#define MIDI_OUT_SAMPLERFX    6
+#define MIDI_OUT_BLOOPER      9
+
+// Canal MIDI d'entrée pour les contrôles (changement song/part)
+#define MIDI_IN_CONTROL_CH    2
+#define MIDI_NOTE_SONG_NEXT   48
+#define MIDI_NOTE_PART_NEXT   49
 
 // Blooper CC mapping (Chase Bliss Blooper MIDI CC numbers)
 typedef enum {
@@ -61,7 +73,7 @@ typedef enum {
 typedef enum {
     FRENDO_OK = 0,
     FRENDO_ERROR_FILE,
-    FRENDO_ERROR_JSON,
+    FRENDO_ERROR_PARSE,
     FRENDO_ERROR_MIDI,
     FRENDO_ERROR_MEMORY,
     FRENDO_ERROR_ALSA
@@ -69,8 +81,8 @@ typedef enum {
 
 // Structure pour une séquence de notes MIDI
 typedef struct {
-    uint8_t notes[MAX_NOTES_PER_SEQ];  // Valeurs MIDI (0-127)
-    int count;                         // Nombre de notes dans la séquence
+    uint8_t notes[MAX_NOTES_PER_SEQ];   // Valeurs MIDI (0-127)
+    int count;                          // Nombre de notes dans la séquence
 } note_sequence_t;
 
 // Structure pour une séquence de valeurs CC (Control Change)
@@ -82,53 +94,53 @@ typedef struct {
 
 // Structure pour une track avec routing MIDI
 typedef struct {
-    note_sequence_t sequence;    // Séquence de notes
-    uint8_t listen_channel;      // Canal MIDI d'entrée qui déclenche cette track
+    note_sequence_t sequence;           // Séquence de notes
+    uint8_t listen_channel;             // Canal MIDI d'entrée qui déclenche cette track
 } track_t;
 
 // Structure pour une partie d'une chanson
 typedef struct {
-    track_t BASS;              // Séquence BASS (canal MIDI out 3)
-    track_t MS20;             // Séquence MS20 (canal MIDI out 4)
-    track_t SAMPLERVOICE;     // Séquence SAMPLERVOICE (canal MIDI out 5)
-    track_t SAMPLERFX;        // Séquence SAMPLERFX (canal MIDI out 6)
+    track_t BASS;                       // Séquence BASS (canal MIDI out 3)
+    track_t MS20;                       // Séquence MS20 (canal MIDI out 4)
+    track_t SAMPLERVOICE;               // Séquence SAMPLERVOICE (canal MIDI out 5)
+    track_t SAMPLERFX;                  // Séquence SAMPLERFX (canal MIDI out 6)
 
     // Blooper CC sequences (up to 10 different CC tracks per part)
-    cc_sequence_t BLOOPER_CC[10];  // Array of CC sequences
-    int blooper_cc_count;          // Number of active Blooper CC tracks
-    uint8_t blooper_listen_channel; // Channel that triggers Blooper CC
+    cc_sequence_t BLOOPER_CC[10];       // Array of CC sequences
+    int blooper_cc_count;               // Number of active Blooper CC tracks
+    uint8_t blooper_listen_channel;     // Channel that triggers Blooper CC
 } song_part_t;
 
 // Structure pour une chanson complète
 typedef struct {
-    char name[MAX_NAME_LENGTH];        // Nom de la chanson
+    char name[MAX_NAME_LENGTH];            // Nom de la chanson
     song_part_t parts[MAX_PARTS_PER_SONG]; // Parties de la chanson
-    int part_count;                    // Nombre de parties
+    int part_count;                        // Nombre de parties
 } song_t;
 
 // Structure pour un set complet de chansons
 typedef struct {
-    song_t songs[MAX_SONGS];           // Tableau de chansons
-    int song_count;                    // Nombre de chansons
+    song_t songs[MAX_SONGS];               // Tableau de chansons
+    int song_count;                        // Nombre de chansons
 } song_set_t;
 
 // État global du système
 typedef struct {
-    int song_index;                  // Index de la chanson courante
-    int part_index;                  // Index de la partie courante
-    int bass_note_index;              // Position dans la séquence BASS
-    int ms20_note_index;             // Position dans la séquence MS20
-    int samplervoice_note_index;     // Position dans la séquence SAMPLERVOICE
-    int samplerfx_note_index;        // Position dans la séquence SAMPLERFX
-    int blooper_cc_index[10];        // Position dans les séquences CC Blooper (max 10)
+    int song_index;                        // Index de la chanson courante
+    int part_index;                        // Index de la partie courante
+    int bass_note_index;                   // Position dans la séquence BASS
+    int ms20_note_index;                   // Position dans la séquence MS20
+    int samplervoice_note_index;           // Position dans la séquence SAMPLERVOICE
+    int samplerfx_note_index;              // Position dans la séquence SAMPLERFX
+    int blooper_cc_index[10];              // Position dans les séquences CC Blooper (max 10)
 } frendo_state_t;
 
 // Structure pour l'interface ALSA
 typedef struct {
-    snd_seq_t *seq_handle;     // Handle du séquenceur ALSA
-    int input_port;            // Port d'entrée MIDI
-    int output_port;           // Port de sortie MIDI
-    int client_id;             // ID client ALSA
+    snd_seq_t *seq_handle;                 // Handle du séquenceur ALSA
+    int input_port;                        // Port d'entrée MIDI
+    int output_port;                       // Port de sortie MIDI
+    int client_id;                         // ID client ALSA
 } midi_interface_t;
 
 // Fonctions principales (définies dans leurs fichiers respectifs)
@@ -144,8 +156,8 @@ void process_midi_message(const snd_seq_event_t *event,
                          midi_interface_t *midi,
                          song_set_t *song_set,
                          frendo_state_t *state);
-void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const char *track_name, int note_index, int total_notes);
-void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, uint8_t value, const char *cc_name, int value_index, int total_values);
+void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note);
+void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, uint8_t value);
 void cleanup_midi_interface(midi_interface_t *midi);
 
 // frendo_core.c
@@ -174,5 +186,6 @@ const char* blooper_cc_number_to_name(int cc_number);
 const char* error_to_string(frendo_error_t error);
 void print_banner(void);
 void print_state_change(void);
+void print_song_set_info(const song_set_t *song_set);
 
 #endif // BASIC_FRENDO_H

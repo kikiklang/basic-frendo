@@ -185,11 +185,11 @@ void process_midi_message(const snd_seq_event_t *event,
 
     // printf("[MIDI IN]  Channel: %d | Note: %d\n", channel, note);
 
-    // Canal 2 note 48/49 = contrôles (changement song/part)
-    if (channel == 2) {
-        if (note == 48) {
+    // Canal de contrôle : changement song/part
+    if (channel == MIDI_IN_CONTROL_CH) {
+        if (note == MIDI_NOTE_SONG_NEXT) {
             update_song(state, song_set);
-        } else if (note == 49) {
+        } else if (note == MIDI_NOTE_PART_NEXT) {
             update_part(state, song_set);
         }
         printf("─────────────────────────────────────────\n");
@@ -229,7 +229,7 @@ void process_midi_message(const snd_seq_event_t *event,
 /**
  * Envoie une note MIDI (NOTE ON suivi de NOTE OFF)
  */
-void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const char *track_name, int note_index, int total_notes) {
+void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note) {
     if (!midi || !midi->seq_handle) {
         return;
     }
@@ -263,9 +263,6 @@ void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const
     // Forcer l'envoi immédiat
     snd_seq_drain_output(midi->seq_handle);
 
-    // printf("[MIDI OUT] %s | Channel: %d | Note: %d | Index %d/%d\n",
-    //        track_name, channel, note, note_index, total_notes);
-
     // Attendre un court délai (10ms comme dans la version Node.js)
     usleep(10000); // 10ms = 10000 microsecondes
 
@@ -285,7 +282,7 @@ void send_midi_note(midi_interface_t *midi, uint8_t channel, uint8_t note, const
 /**
  * Envoie un Control Change MIDI
  */
-void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, uint8_t value, const char *cc_name, int value_index, int total_values) {
+void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, uint8_t value) {
     if (!midi || !midi->seq_handle) {
         return;
     }
@@ -318,9 +315,6 @@ void send_midi_cc(midi_interface_t *midi, uint8_t channel, uint8_t cc_number, ui
 
     // Forcer l'envoi immédiat
     snd_seq_drain_output(midi->seq_handle);
-
-    // printf("[MIDI OUT] %s | Channel: %d | CC#%d | Value: %d | Index %d/%d\n",
-    //        cc_name, channel, cc_number, value, value_index, total_values);
 }
 
 /**

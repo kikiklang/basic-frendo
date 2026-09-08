@@ -1,10 +1,12 @@
-/* 
+#define _POSIX_C_SOURCE 200809L
+
+/*
  * main.c - Programme principal de Basic Frendo C
  * 
  * Version C optimisée du séquenceur MIDI Basic Frendo
  * Conçue pour des performances live avec latence minimale
  * 
- * Usage: ./basic-frendo [fichier_set.json]
+ * Usage: ./basic-frendo
  */
 
 #include "basic_frendo.h"
@@ -17,18 +19,15 @@
 
 // Variables globales pour la gestion propre de l'arrêt
 static midi_interface_t g_midi;
-static bool g_running = true;
+static volatile sig_atomic_t g_running = 1;
 
 /**
  * Gestionnaire de signal pour arrêt propre (Ctrl+C)
+ * Ne fait que positionner le flag — pas d'I/O, pas d'exit()
  */
-void signal_handler(int signal) {
-    printf("\n[SIGNAL] Received signal %d, shutting down...\n", signal);
-    g_running = false;
-    
-    // Forcer l'arrêt immédiat si nécessaire
-    cleanup_midi_interface(&g_midi);
-    exit(0);
+static void signal_handler(int sig) {
+    (void)sig;
+    g_running = 0;
 }
 
 
@@ -60,21 +59,15 @@ void midi_loop(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *sta
     // Afficher l'état initial
     update_tracker_display(song_set, state);
 
-    while (g_running) {
+    while (g_running != 0) {
         // Attendre des événements MIDI avec timeout de 100ms
         if (poll(pfds, npfds, 100) > 0) {
             
             // Traiter tous les événements disponibles
             snd_seq_event_t *ev;
-            while (snd_seq_event_input(midi->seq_handle, &ev) >= 0) {
-                
-                // Traiter l'événement MIDI
+            while (g_running != 0 && snd_seq_event_input(midi->seq_handle, &ev) >= 0) {
                 process_midi_message(ev, midi, song_set, state);
-
-                // Mettre à jour l'affichage tracker
                 update_tracker_display(song_set, state);
-
-                // Libérer l'événement
                 snd_seq_free_event(ev);
             }
         }
@@ -93,7 +86,7 @@ void midi_loop(midi_interface_t *midi, song_set_t *song_set, frendo_state_t *sta
 /**
  * Fonction principale
  */
-int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused))) {
+int main(void) {
     frendo_error_t result;
     song_set_t song_set;
     frendo_state_t state = {0}; // Initialiser tout à zéro
@@ -104,9 +97,11 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     // Afficher la bannière
     print_banner();
 
-    // Installer le gestionnaire de signal pour arrêt propre
-    signal(SIGINT, signal_handler);
-    signal(SIGTERM, signal_handler);
+    // Installer le gestionnaire de signal (sans SA_RESTART pour que poll() soit interrompu)
+    struct sigaction sa = { .sa_handler = signal_handler, .sa_flags = 0 };
+    sigemptyset(&sa.sa_mask);
+    sigaction(SIGINT, &sa, NULL);
+    sigaction(SIGTERM, &sa, NULL);
 
     // === 1. SÉLECTION DU SET ===
 
@@ -179,14 +174,6 @@ int main(int argc __attribute__((unused)), char *argv[] __attribute__((unused)))
     
     // === 4. ÉTAT INITIAL ===
     
-    // Initialiser l'état du système
-    state.song_index = 0;
-    state.part_index = 0;
-    state.bass_note_index = 0;
-    state.ms20_note_index = 0;
-    state.samplervoice_note_index = 0;
-    state.samplerfx_note_index = 0;
-
     printf("[INIT] Initial state:\n");
     printf("       Song: '%s' (1/%d)\n",
            song_set.songs[0].name, song_set.song_count);

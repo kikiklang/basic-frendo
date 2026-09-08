@@ -3,29 +3,69 @@ INPUTS
   snare = channel:1
 
 PART
-  BASS[kick]: 30 30 30 30 30 30 30 34 30 30 30 30 30 30 30 33
-  MS20[snare]: 66 70 68 75 66 65 51 68
-  HAPINESTRIANGLE[snare]: 54 58 54 58 54 58 54 58 54 58 54 58 54 58 54 57
-  HAPINESSQUARE[kick]: 54 54 54 58 54 54 54 58 54 54 54 58 54 54 54 57
+#   BASS[kick]  MS20[snare]
+01  30          66
+02  30          70
+03  30          68
+04  30          75
+05  30          66
+06  30          65
+07  30          51
+08  34          68
+09  30          66
+10  30          70
+11  30          68
+12  30          75
+13  30          66
+14  30          65
+15  30          51
+16  33          68
 
 PART
-  BASS[kick]: 36 36 36 36 36 36 36 39
-  MS20[snare]: 48 48 48 48 48 48 48 51
-  HAPINESTRIANGLE[snare]: 54 54 54 58
-  HAPINESSQUARE[kick]: 54 54 54 58
-  SAMPLERVOICE[snare]: R[1..33]
-  SAMPLERFX[kick]: 1
+#   BASS[kick]  MS20[snare]  SAMPLERVOICE[snare]  SAMPLERFX[kick]
+01  36          48           R[1..33]             1
+02  36          48           .                    .
+03  36          48           .                    .
+04  36          48           .                    .
+05  36          48           .                    .
+06  36          48           .                    .
+07  36          48           .                    .
+08  39          51           .                    .
 
 PART
-  BASS[kick]: 27 27 27 27 27 27 27 30 27 27 27 27 27 27 27 29
-  MS20[snare]: 51 51 51 51 51 51 51 54 51 51 51 51 51 51 51 53
-  HAPINESTRIANGLE[snare]: 51 58 51 58 51 58 51 58 51 58 51 58 51 58 51 57
-  HAPINESSQUARE[kick]: 51 51 51 51 51 51 51 54 51 51 51 51 51 51 51 53
-  SAMPLERVOICE[snare]: R[1..33]
-  SAMPLERFX[kick]: 2 3 4 5 6 7 8
+#   BASS[kick]  MS20[snare]  SAMPLERVOICE[snare]  SAMPLERFX[kick]
+01  27          51           R[1..33]             2
+02  27          51           .                    3
+03  27          51           .                    4
+04  27          51           .                    5
+05  27          51           .                    6
+06  27          51           .                    7
+07  27          51           .                    8
+08  30          54           .                    .
+09  27          51           .                    .
+10  27          51           .                    .
+11  27          51           .                    .
+12  27          51           .                    .
+13  27          51           .                    .
+14  27          51           .                    .
+15  27          51           .                    .
+16  29          53           .                    .
 
 PART
-  BASS[kick]: 30 30 30 30 30 30 30 34 30 30 30 30 30 30 30 33
-  HAPINESTRIANGLE[snare]: 54 58 54 58 54 58 54 58 54 58 54 58 54 58 54 57
-  HAPINESSQUARE[kick]: 54 54 54 58 54 54 54 58 54 54 54 58 54 54 54 57
-  SAMPLERFX[kick]: 9 0 0 0 0 0 0 0
+#   BASS[kick]  SAMPLERFX[kick]
+01  30          9
+02  30          0
+03  30          0
+04  30          0
+05  30          0
+06  30          0
+07  30          0
+08  34          0
+09  30          .
+10  30          .
+11  30          .
+12  30          .
+13  30          .
+14  30          .
+15  30          .
+16  33          .

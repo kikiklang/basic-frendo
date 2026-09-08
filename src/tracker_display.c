@@ -22,7 +22,7 @@ static void format_note(char *buf, uint8_t midi_note) {
     } else {
         int octave = (midi_note / 12) - 1;
         int note = midi_note % 12;
-        sprintf(buf, "%s%d(%d)", NOTE_NAMES[note], octave, midi_note);
+        snprintf(buf, 16, "%s%d(%d)", NOTE_NAMES[note], octave, midi_note);
     }
 }
 
@@ -107,14 +107,14 @@ void update_tracker_display(song_set_t *song_set, frendo_state_t *state) {
 
     for (int i = 0; i < 4; i++) {
         const track_t *track = tracks[i];
-        sprintf(routing, "%d->%d", track->listen_channel, out_channels[i]);
+        snprintf(routing, sizeof(routing), "%d->%d", track->listen_channel, out_channels[i]);
 
         if (track->sequence.count == 0) {
             strcpy(position, "--/--");
             strcpy(note_str, "--");
             draw_progress_bar(progress, 0, 0);
         } else {
-            sprintf(position, "%02d/%d", track_indices[i], track->sequence.count);
+            snprintf(position, sizeof(position), "%02d/%d", track_indices[i], track->sequence.count);
             format_note(note_str, track->sequence.notes[track_indices[i]]);
             draw_progress_bar(progress, track_indices[i], track->sequence.count);
         }
@@ -127,15 +127,15 @@ void update_tracker_display(song_set_t *song_set, frendo_state_t *state) {
         const cc_sequence_t *cc = &part->BLOOPER_CC[i];
         const char *cc_name = blooper_cc_number_to_name(cc->cc_number);
 
-        sprintf(routing, "%d->9", part->blooper_listen_channel);
+        snprintf(routing, sizeof(routing), "%d->%d", part->blooper_listen_channel, MIDI_OUT_BLOOPER);
 
         if (cc->count == 0) {
             strcpy(position, "--/--");
             strcpy(note_str, "--");
             draw_progress_bar(progress, 0, 0);
         } else {
-            sprintf(position, "%02d/%d", state->blooper_cc_index[i], cc->count);
-            sprintf(note_str, "%d", cc->values[state->blooper_cc_index[i]]);
+            snprintf(position, sizeof(position), "%02d/%d", state->blooper_cc_index[i], cc->count);
+            snprintf(note_str, sizeof(note_str), "%d", cc->values[state->blooper_cc_index[i]]);
             draw_progress_bar(progress, state->blooper_cc_index[i], cc->count);
         }
 

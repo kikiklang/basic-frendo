@@ -124,32 +124,27 @@ void play_track_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_
     const note_sequence_t *seq;
     int *note_index;
     uint8_t out_channel;
-    const char *track_name;
 
     switch (track_id) {
         case TRACK_BASS:
             seq = &current_part->BASS.sequence;
             note_index = &state->bass_note_index;
-            out_channel = 3;
-            track_name = "BASS";
+            out_channel = MIDI_OUT_BASS;
             break;
         case TRACK_MS20:
             seq = &current_part->MS20.sequence;
             note_index = &state->ms20_note_index;
-            out_channel = 4;
-            track_name = "MS20";
+            out_channel = MIDI_OUT_MS20;
             break;
         case TRACK_SAMPLERVOICE:
             seq = &current_part->SAMPLERVOICE.sequence;
             note_index = &state->samplervoice_note_index;
-            out_channel = 5;
-            track_name = "SAMPLERVOICE";
+            out_channel = MIDI_OUT_SAMPLERVOICE;
             break;
         case TRACK_SAMPLERFX:
             seq = &current_part->SAMPLERFX.sequence;
             note_index = &state->samplerfx_note_index;
-            out_channel = 6;
-            track_name = "SAMPLERFX";
+            out_channel = MIDI_OUT_SAMPLERFX;
             break;
         default:
             return;
@@ -172,7 +167,7 @@ void play_track_note(midi_interface_t *midi, song_set_t *song_set, frendo_state_
     }
 
     // Envoyer la note
-    send_midi_note(midi, out_channel, note, track_name, *note_index, seq->count);
+    send_midi_note(midi, out_channel, note);
 }
 
 /**
@@ -337,8 +332,6 @@ void play_BLOOPER_cc(midi_interface_t *midi, song_set_t *song_set, frendo_state_
         }
 
         // Envoyer le CC sur le canal MIDI out 9 (Blooper)
-        char cc_name_buffer[64];
-        snprintf(cc_name_buffer, sizeof(cc_name_buffer), "BLOOPER[CC#%d]", cc_seq->cc_number);
-        send_midi_cc(midi, 9, cc_seq->cc_number, value, cc_name_buffer, state->blooper_cc_index[i], cc_seq->count);
+        send_midi_cc(midi, MIDI_OUT_BLOOPER, cc_seq->cc_number, value);
     }
 }
